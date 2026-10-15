@@ -1,0 +1,118 @@
+# NBPD UAS Pre-Flight
+
+A static, read-only pre-flight page for New Brunswick (NJ) Police Department drone pilots. It's built for phones, needs no login, and is hosted on GitHub Pages.
+
+A scheduled GitHub Action fetches TFRs, METAR/TAF, the NWS forecast and alerts, and the planetary Kp index every 10 minutes. It applies the thresholds in `config.json` and deploys `data.json` together with the page. The page re-polls `data.json` every 5 minutes. It computes sunrise, sunset and civil twilight in the browser.
+
+> Situational awareness aid only. The remote pilot in command remains responsible for the preflight assessment under 14 CFR 107.49 and for checking official FAA sources.
+
+## Setup
+
+1. **Enable Pages with GitHub Actions as the source.** Go to *Settings → Pages → Build and deployment → Source* and choose **GitHub Actions**.
+2. **Set the NWS contact variable.** Go to *Settings → Secrets and variables → Actions → Variables → New repository variable* and add `NWS_CONTACT`. Set it to an email address or URL where NWS can reach the page's maintainer, for example `uas-unit@example.org`. The NWS API requires an identifying User-Agent, which is sent as `(nbpd-uas-preflight, <NWS_CONTACT>)`.
+3. **Run the workflow once.** Go to *Actions → Refresh pre-flight data → Run workflow*. After that it runs every 10 minutes and on every push to `main`. The page URL appears on the run summary.
+4. **Check the deployment.** Open the page, expand **Data source status** at the bottom, and confirm that every source shows ✅.
+
+The workflow never commits to the repository. Each run builds a new Pages deployment with a fresh `data.json`.
+
+Note: GitHub sometimes delays scheduled workflows by several minutes or more when it is under load. When that happens, the page shows **DATA STALE** once `data.json` is more than 30 minutes old.
+
+## Editing `config.json`
+
+| Key | Meaning |
+| --- | --- |
+| `center.lat`, `center.lon` | Reference point for TFR distances, NWS forecast/alerts and sun times. Default: 40.4862, -74.4518. |
+| `tfrRadiusNm` | Local TFRs farther than this are dropped. Default: 30. |
+| `tfrStates` | FAA list `state` values checked for local TFRs. |
+| `stations` | METAR/TAF stations, listed in display order. |
+| `forecastHours` | Number of hourly forecast rows shown. |
+| `staleMinutes` | Age after which the page shows DATA STALE. |
+| `thresholds` | Caution and no-go-review limits (see below). |
+| `tfrDetailXmlUrls` | Per-TFR XML URL patterns, tried in order. `{id}` becomes `6_1234` for NOTAM `6/1234`. Edit these if the FAA moves the files. |
+
+Commit a change to `config.json` on `main` and the workflow redeploys automatically.
+
+### Thresholds
+
+| Condition | CAUTION | NO-GO REVIEW |
+| --- | --- | --- |
+| Wind (METAR) | ≥ 15 kt | ≥ 20 kt |
+| Gust (METAR) | ≥ 20 kt | ≥ 25 kt |
+| Visibility | < 5 SM | < 3 SM |
+| Ceiling (lowest BKN/OVC/VV) | < 1500 ft AGL | < 900 ft AGL |
+| Precipitation | forecast > 30% | precip/thunderstorm in a METAR now |
+| Kp | ≥ 4 | ≥ 5 |
+| TFR | within `tfrRadiusNm`, or distance unknown | within 5 NM, or covering the point |
+| NWS alert | Advisory | Watch or Warning |
+
+How the thresholds are applied:
+
+- **Worst condition wins.** The banner shows the highest level found anywhere on the page.
+- **METAR thresholds apply to every listed station.** The banner and the station card both name the station that triggered a flag.
+- **Forecast hours can raise the banner only to CAUTION.** Wind, gust and precipitation in the next 6 hours are flagged, but forecast values never trigger NO-GO REVIEW on their own.
+- **Missing data is never GO.**
+  - If any source fails, the banner shows at least CAUTION, and that section says to check the official source.
+  - If `data.json` is more than 30 minutes old, the page shows DATA STALE and raises the banner to at least CAUTION.
+  - A METAR older than 90 minutes (`metarMaxAgeMin`) is flagged CAUTION.
+- **The page adds a note outside sunrise to sunset.** During civil twilight or at night it reminds the pilot that anti-collision lighting is required (14 CFR 107.29). This note does not change the banner.
+
+## Data sources (all keyless)
+
+| Source | Endpoint |
+| --- | --- |
+| FAA TFR list | `https://tfr.faa.gov/tfrapi/exportTfrList` |
+| FAA TFR detail | `https://tfr.faa.gov/download/detail_{id}.xml`, with the older `save_pages/` path as a fallback |
+| METAR / TAF | `https://aviationweather.gov/api/data/{metar,taf}?ids=…&format=json` |
+| NWS | `/points/{lat},{lon}`, then `forecastHourly` and `forecastGridData` (for gusts), plus `/alerts/active?point=` |
+| Kp | `https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json` |
+
+How TFRs are filtered:
+
+- **Local:** TFRs whose `state` is NJ, NY or PA. Each one's XML is parsed for its circle or polygon (arcs included) and its altitudes.
+- **Standing national restrictions:** TFRs with `facility` FDC or `state` USA. These appear in a collapsed group and do not affect the banner.
+- **Unparseable geometry:** if a TFR's XML can't be fetched or its geometry can't be read, the TFR is kept and marked "distance unknown — check FAA" (CAUTION).
+
+## Local development
+
+You need Node 20 or later. There are no dependencies.
+
+```sh
+node scripts/fetch.mjs              # live fetch -> data.json (set NWS_CONTACT first)
+python3 -m http.server 8000         # then open http://localhost:8000/
+```
+
+You can preview the bundled samples without network access:
+
+- `http://localhost:8000/?data=samples/data-caution.json`: all sources OK, CAUTION
+- `?data=samples/data-nogo.json`: NO-GO REVIEW (nearby VIP TFR, thunderstorm, Kp 5.33)
+- `?data=samples/data-stale.json`: data 47 minutes old, shows DATA STALE
+- `?data=samples/data-partial.json`: NWS forecast, Kp and TFR-detail fetches failed
+
+The samples also work on the deployed site at `/<repo>/?data=samples/…`. They are marked **SAMPLE DATA — NOT LIVE**.
+
+To run the tests and rebuild the samples:
+
+```sh
+node test/test.mjs                  # parser + pipeline checks (offline)
+npm run samples                     # regenerate test/fixtures/* and samples/*
+```
+
+`fetch.mjs` also takes these options:
+
+- `--fixtures dirA,dirB`: read raw responses from files instead of the network. The first directory with a matching file wins.
+- `--fail kp,nws_points`: simulate an outage of those sources.
+- `--now <ISO>`: run as if it were that time.
+- `--sample-age <min>`: mark the output as sample data that is `<min>` minutes old.
+- `--out <file>`: write somewhere other than `data.json`.
+
+The fixtures in `test/fixtures/` are synthetic. They follow each API's response format, but every value in them is invented.
+
+## Files
+
+```
+index.html  app.js  suncalc.js   page (vanilla JS/CSS, no build, no CDN)
+config.json                      hand-edited settings
+scripts/fetch.mjs                fetch + filter + thresholds -> data.json
+.github/workflows/refresh.yml    cron every 10 min + manual run -> GitHub Pages
+samples/  test/                  sample data.json files, fixtures, tests
+```

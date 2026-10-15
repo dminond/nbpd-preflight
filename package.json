@@ -1,0 +1,11 @@
+{
+  "name": "nbpd-preflight",
+  "private": true,
+  "description": "Static UAS pre-flight situational awareness page for NBPD",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "fetch": "node scripts/fetch.mjs",
+    "samples": "node test/make-fixtures.mjs && node test/make-samples.mjs",
+    "test": "node test/test.mjs"
+  }
+}

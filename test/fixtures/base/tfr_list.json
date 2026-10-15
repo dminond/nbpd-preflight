@@ -1,0 +1,58 @@
+[
+ {
+  "notam_id": "6/4321",
+  "type": "HAZARDS",
+  "facility": "ZNY",
+  "state": "NJ",
+  "description": "Hillsborough, NJ, Thursday, October 15, 2026 through Friday, October 16, 2026 UTC",
+  "creation_date": "10/14/2026"
+ },
+ {
+  "notam_id": "6/5555",
+  "type": "SECURITY",
+  "facility": "ZOB",
+  "state": "NY",
+  "description": "Buffalo, NY, Thursday, October 15, 2026 UTC",
+  "creation_date": "10/13/2026"
+ },
+ {
+  "notam_id": "6/7777",
+  "type": "SPECIAL",
+  "facility": "ZNY",
+  "state": "PA",
+  "description": "Morrisville, PA, Thursday, October 15, 2026 UTC",
+  "creation_date": "10/15/2026"
+ },
+ {
+  "notam_id": "6/2468",
+  "type": "SECURITY",
+  "facility": "ZNY",
+  "state": "NJ",
+  "description": "Perth Amboy, NJ, Thursday, October 15, 2026 UTC",
+  "creation_date": "10/15/2026"
+ },
+ {
+  "notam_id": "4/3621",
+  "type": "SECURITY",
+  "facility": "FDC",
+  "state": "USA",
+  "description": "Sporting events and stadiums nationwide",
+  "creation_date": "03/01/2024"
+ },
+ {
+  "notam_id": "1/1155",
+  "type": "SECURITY",
+  "facility": "FDC",
+  "state": "DC",
+  "description": "Washington, DC Special Flight Rules Area",
+  "creation_date": "01/01/2021"
+ },
+ {
+  "notam_id": "6/9001",
+  "type": "HAZARDS",
+  "facility": "ZLA",
+  "state": "CA",
+  "description": "Los Angeles, CA wildfire",
+  "creation_date": "10/12/2026"
+ }
+]

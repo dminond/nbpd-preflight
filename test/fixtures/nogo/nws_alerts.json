@@ -1,0 +1,20 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "properties": {
+    "status": "Actual",
+    "messageType": "Alert",
+    "event": "Severe Thunderstorm Warning",
+    "severity": "Severe",
+    "urgency": "Immediate",
+    "headline": "Severe Thunderstorm Warning issued October 15 at 1:44PM EDT until October 15 at 2:30PM EDT by NWS Mount Holly NJ",
+    "description": "At 144 PM EDT, a severe thunderstorm was located near Bound Brook, moving east at 35 mph.\n\nHAZARD...60 mph wind gusts and penny size hail.",
+    "instruction": "For your protection move to an interior room on the lowest floor of a building.",
+    "onset": "2026-10-15T17:00:00+00:00",
+    "ends": "2026-10-15T18:00:00+00:00",
+    "senderName": "NWS Mount Holly NJ"
+   }
+  }
+ ]
+}

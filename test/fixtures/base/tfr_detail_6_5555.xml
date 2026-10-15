@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<XNOTAM-Update version="2.0" origin="USNS">
+ <Group><Add><Not>
+  <NotUid><txtLocalName>6/5555</txtLocalName><codeFacility>ZNY</codeFacility></NotUid>
+  <dateEffective>2026-10-15T14:00:00</dateEffective>
+  <dateExpire>2026-10-15T20:00:00</dateExpire>
+  <codeTimeZone>EDT</codeTimeZone>
+  <txtDescrUSNS>Buffalo, NY VIP</txtDescrUSNS>
+  <TFRNot><codeType>SECURITY</codeType>
+   <TFRAreaGroup>
+    <aseTFRArea><txtName>Area A</txtName>
+     <valDistVerLower>0</valDistVerLower><uomDistVerLower>FT</uomDistVerLower><codeDistVerLower>ALT</codeDistVerLower>
+     <valDistVerUpper>18000</valDistVerUpper><uomDistVerUpper>FT</uomDistVerUpper><codeDistVerUpper>STD</codeDistVerUpper>
+    </aseTFRArea>
+    <abdMergedArea>
+     <Avx><codeDatum>WGE</codeDatum><codeType>CIR</codeType><geoLat>425300N</geoLat><geoLong>0784900W</geoLong><geoLatArc>425300N</geoLatArc><geoLongArc>0784900W</geoLongArc><valRadiusArc>10</valRadiusArc><uomRadiusArc>NM</uomRadiusArc></Avx>
+    </abdMergedArea>
+   </TFRAreaGroup>
+  </TFRNot>
+ </Not></Add></Group>
+</XNOTAM-Update>

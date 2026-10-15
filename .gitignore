@@ -1,0 +1,5 @@
+data.json
+data.json.tmp
+test/.out.json
+node_modules/
+_site/

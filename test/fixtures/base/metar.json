@@ -1,0 +1,87 @@
+[
+ {
+  "icaoId": "KSMQ",
+  "receiptTime": "",
+  "obsTime": 1792086360,
+  "reportTime": "2026-10-15T17:46:00Z",
+  "temp": 16.1,
+  "dewp": 4.4,
+  "wdir": 290,
+  "wspd": 9,
+  "wgst": null,
+  "visib": "10+",
+  "altim": 1016.3,
+  "wxString": null,
+  "metarType": "METAR",
+  "rawOb": "METAR KSMQ 151746Z 29009KT 10SM SCT045 16/04 A3001",
+  "lat": 0,
+  "lon": 0,
+  "elev": 0,
+  "name": "Somerville/Somerset Arpt, NJ, US",
+  "clouds": [
+   {
+    "cover": "SCT",
+    "base": 4500
+   }
+  ],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "KEWR",
+  "receiptTime": "",
+  "obsTime": 1792086600,
+  "reportTime": "2026-10-15T17:50:00Z",
+  "temp": 17.2,
+  "dewp": 3.9,
+  "wdir": 300,
+  "wspd": 14,
+  "wgst": 22,
+  "visib": "10+",
+  "altim": 1016.3,
+  "wxString": null,
+  "metarType": "METAR",
+  "rawOb": "METAR KEWR 151751Z 30014G22KT 10SM FEW050 BKN080 17/04 A3000 RMK AO2 PK WND 30027/1712 SLP160",
+  "lat": 0,
+  "lon": 0,
+  "elev": 0,
+  "name": "Newark Liberty Intl, NJ, US",
+  "clouds": [
+   {
+    "cover": "FEW",
+    "base": 5000
+   },
+   {
+    "cover": "BKN",
+    "base": 8000
+   }
+  ],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "KTTN",
+  "receiptTime": "",
+  "obsTime": 1792086600,
+  "reportTime": "2026-10-15T17:50:00Z",
+  "temp": 15.6,
+  "dewp": 6.1,
+  "wdir": "VRB",
+  "wspd": 4,
+  "wgst": null,
+  "visib": 6,
+  "altim": 1016.3,
+  "wxString": "HZ",
+  "metarType": "METAR",
+  "rawOb": "METAR KTTN 151753Z VRB04KT 6SM HZ OVC031 16/06 A3002 RMK AO2 SLP165",
+  "lat": 0,
+  "lon": 0,
+  "elev": 0,
+  "name": "Trenton-Mercer Arpt, NJ, US",
+  "clouds": [
+   {
+    "cover": "OVC",
+    "base": 3100
+   }
+  ],
+  "fltCat": null
+ }
+]

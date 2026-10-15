@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<XNOTAM-Update version="2.0" origin="USNS">
+ <Group><Add><Not>
+  <NotUid><txtLocalName>6/4321</txtLocalName><codeFacility>ZNY</codeFacility></NotUid>
+  <dateEffective>2026-10-15T12:00:00</dateEffective>
+  <dateExpire>2026-10-16T23:59:00</dateExpire>
+  <codeTimeZone>EDT</codeTimeZone>
+  <txtDescrUSNS>Hillsborough, NJ wildfire suppression &amp; aerial operations</txtDescrUSNS>
+  <TFRNot><codeType>HAZARDS</codeType>
+   <TFRAreaGroup>
+    <aseTFRArea><txtName>Area A</txtName>
+     <valDistVerLower>0</valDistVerLower><uomDistVerLower>FT</uomDistVerLower><codeDistVerLower>ALT</codeDistVerLower>
+     <valDistVerUpper>2500</valDistVerUpper><uomDistVerUpper>FT</uomDistVerUpper><codeDistVerUpper>ALT</codeDistVerUpper>
+    </aseTFRArea>
+    <abdMergedArea>
+     <Avx><codeDatum>WGE</codeDatum><codeType>GRC</codeType><geoLat>40.55000000N</geoLat><geoLong>074.62000000W</geoLong></Avx>
+     <Avx><codeDatum>WGE</codeDatum><codeType>CWA</codeType><geoLat>40.55000000N</geoLat><geoLong>074.70000000W</geoLong><geoLatArc>40.50000000N</geoLatArc><geoLongArc>074.70000000W</geoLongArc><valRadiusArc>3</valRadiusArc><uomRadiusArc>NM</uomRadiusArc></Avx>
+     <Avx><codeDatum>WGE</codeDatum><codeType>GRC</codeType><geoLat>40.45000000N</geoLat><geoLong>074.70000000W</geoLong></Avx>
+     <Avx><codeDatum>WGE</codeDatum><codeType>GRC</codeType><geoLat>40.45000000N</geoLat><geoLong>074.65000000W</geoLong></Avx>
+    </abdMergedArea>
+   </TFRAreaGroup>
+  </TFRNot>
+ </Not></Add></Group>
+</XNOTAM-Update>

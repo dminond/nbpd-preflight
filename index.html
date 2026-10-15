@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NBPD UAS Pre-Flight</title>
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#000000">
+<style>
+:root {
+  --bg: #000; --fg: #fff; --muted: #c8c8c8; --card: #111; --line: #3a3a3a; --link: #7cc4ff;
+  --go: #0b8a3a; --go-fg: #fff; --caution: #ffc400; --caution-fg: #000; --nogo: #d10000; --nogo-fg: #fff;
+  --info: #2a2a2a; --info-fg: #fff; --chip-ok: #1f6f3a;
+}
+:root[data-theme="light"] {
+  --bg: #fff; --fg: #000; --muted: #333; --card: #f2f2f2; --line: #888; --link: #0040a8;
+  --go: #006b2c; --caution: #ffc400; --nogo: #b00000; --info: #ddd; --info-fg: #000;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 19px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  padding: 0 max(12px, env(safe-area-inset-right)) 32px max(12px, env(safe-area-inset-left));
+}
+main { max-width: 760px; margin: 0 auto; }
+a { color: var(--link); }
+h1 { font-size: 1rem; font-weight: 600; margin: 10px 0 6px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+h2 { font-size: 1.15rem; margin: 0 0 8px; }
+.mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .85rem; word-break: break-word; white-space: pre-wrap; }
+.muted { color: var(--muted); }
+.small { font-size: .85rem; }
+button { font: inherit; font-size: .85rem; color: var(--fg); background: var(--card); border: 2px solid var(--line); border-radius: 8px; padding: 6px 10px; min-height: 40px; }
+
+#banner { border-radius: 12px; padding: 14px 16px; margin: 6px 0 12px; border: 3px solid transparent; }
+#banner .lvl { font-size: 2.3rem; font-weight: 900; letter-spacing: .02em; line-height: 1.05; }
+#banner .asof { font-size: 1.05rem; font-weight: 600; margin-top: 4px; }
+#banner ul { margin: 8px 0 0; padding-left: 1.2em; font-size: .95rem; }
+#banner .stale { font-weight: 900; font-size: 1.15rem; margin-top: 8px; padding: 6px 8px; background: #000; color: #ffc400; border-radius: 6px; }
+.lv-0 { background: var(--go); color: var(--go-fg); }
+.lv-1 { background: var(--caution); color: var(--caution-fg); }
+.lv-2 { background: var(--nogo); color: var(--nogo-fg); }
+.lv-x { background: var(--info); color: var(--info-fg); border-color: var(--nogo) !important; }
+#banner.lv-1 a, #banner.lv-1 { --link: #000; }
+
+section { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin: 0 0 12px; }
+.item { border-top: 1px solid var(--line); padding: 10px 0; }
+.item:first-of-type { border-top: 0; padding-top: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; }
+.big { font-size: 1.25rem; font-weight: 800; }
+.tag { display: inline-block; font-size: .8rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; vertical-align: middle; }
+.tag.lv-0 { background: var(--chip-ok); }
+.tag.lv-i { background: var(--info); color: var(--info-fg); border: 1px solid var(--line); }
+.err { border-left: 6px solid var(--caution); padding-left: 10px; }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 6px 0; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; font-weight: 700; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+th:first-child, td:first-child { text-align: left; }
+th { font-size: .8rem; color: var(--muted); font-weight: 600; }
+td.c1 { background: var(--caution); color: var(--caution-fg); font-weight: 800; }
+details summary { cursor: pointer; font-weight: 700; padding: 6px 0; min-height: 40px; }
+.links { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.links a { display: block; padding: 12px; border: 2px solid var(--line); border-radius: 10px; text-align: center; font-weight: 700; text-decoration: none; }
+.cat { font-weight: 900; padding: 1px 6px; border-radius: 4px; color: #fff; }
+.cat-VFR { background: #0b8a3a; } .cat-MVFR { background: #1f5fd1; } .cat-IFR { background: #d10000; } .cat-LIFR { background: #b000b0; }
+footer { font-size: .85rem; color: var(--muted); margin-top: 16px; border-top: 1px solid var(--line); padding-top: 10px; }
+#sample { background: #7a00b5; color: #fff; font-weight: 900; text-align: center; padding: 4px; border-radius: 6px; margin-top: 8px; }
+@media (max-width: 420px) { body { font-size: 18px; } #banner .lvl { font-size: 2rem; } .links { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <div id="sample" hidden>SAMPLE DATA — NOT LIVE</div>
+  <h1><span id="title">NBPD UAS Pre-Flight</span><button id="theme" type="button" aria-label="Toggle light/dark">Light/Dark</button></h1>
+
+  <div id="banner" class="lv-x" role="status" aria-live="polite">
+    <div class="lvl">LOADING…</div>
+    <div class="asof">Fetching data</div>
+    <noscript><div class="stale">JavaScript is required. Check official FAA/NWS sources.</div></noscript>
+  </div>
+
+  <section id="s-tfr"><h2>TFRs</h2><div class="body muted">—</div></section>
+  <section id="s-metar"><h2>Current conditions (METAR)</h2><div class="body muted">—</div></section>
+  <section id="s-fcst"><h2>Next 6 hours</h2><div class="body muted">—</div></section>
+  <section id="s-alerts"><h2>NWS alerts</h2><div class="body muted">—</div></section>
+  <section id="s-sky"><h2>Kp &amp; daylight</h2><div class="body muted">—</div></section>
+  <section id="s-links"><h2>Official sources</h2>
+    <div class="links">
+      <a href="https://tfr.faa.gov/tfr3/?page=map" target="_blank" rel="noopener">FAA TFR map</a>
+      <a href="https://www.faa.gov/uas/getting_started/b4ufly" target="_blank" rel="noopener">B4UFLY</a>
+      <a href="https://aviationweather.gov/" target="_blank" rel="noopener">aviationweather.gov</a>
+      <a id="nws-link" href="https://forecast.weather.gov/MapClick.php?lat=40.4862&amp;lon=-74.4518" target="_blank" rel="noopener">NWS forecast</a>
+    </div>
+  </section>
+  <section id="s-sources"><details><summary>Data source status</summary><div class="body small"></div></details></section>
+
+  <footer>
+    Situational awareness aid only. The remote pilot in command remains responsible for the preflight assessment under 14 CFR 107.49 and for checking official FAA sources.
+  </footer>
+</main>
+<script src="suncalc.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

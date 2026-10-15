@@ -1,0 +1,414 @@
+{
+ "schema": 1,
+ "generated_at": "2026-10-15T17:50:00.000Z",
+ "sample": {
+  "age_minutes": 4
+ },
+ "config": {
+  "name": "NBPD UAS Pre-Flight",
+  "center": {
+   "lat": 40.4862,
+   "lon": -74.4518,
+   "label": "New Brunswick, NJ"
+  },
+  "timeZone": "America/New_York",
+  "tfrRadiusNm": 30,
+  "stations": [
+   "KSMQ",
+   "KEWR",
+   "KTTN"
+  ],
+  "staleMinutes": 30,
+  "thresholds": {
+   "windKt": {
+    "caution": 15,
+    "nogo": 20
+   },
+   "gustKt": {
+    "caution": 20,
+    "nogo": 25
+   },
+   "visibilitySm": {
+    "caution": 5,
+    "nogo": 3
+   },
+   "ceilingFtAgl": {
+    "caution": 1500,
+    "nogo": 900
+   },
+   "precipPct": {
+    "caution": 30
+   },
+   "kp": {
+    "caution": 4,
+    "nogo": 5
+   },
+   "tfrNm": {
+    "nogo": 5
+   },
+   "metarMaxAgeMin": 90
+  }
+ },
+ "overall": {
+  "level": "CAUTION",
+  "levelNum": 1,
+  "reasons": [
+   {
+    "level": 1,
+    "source": "tfr",
+    "text": "TFR 6/4321 8.3 NM W"
+   },
+   {
+    "level": 1,
+    "source": "tfr",
+    "text": "TFR 6/7777: distance unknown — check FAA"
+   },
+   {
+    "level": 1,
+    "source": "tfr",
+    "text": "TFR 6/2468: distance unknown — check FAA"
+   },
+   {
+    "level": 1,
+    "source": "metar",
+    "text": "KEWR: gust 22 kt"
+   },
+   {
+    "level": 1,
+    "source": "forecast",
+    "text": "Forecast: gust 20 kt (+1h); gust 22 kt (+2h); wind 16 kt, gust 24 kt (+3h) +2 more"
+   },
+   {
+    "level": 1,
+    "source": "nws_alerts",
+    "text": "NWS: Wind Advisory"
+   }
+  ]
+ },
+ "sources": {
+  "metar": {
+   "ok": true,
+   "ms": 2
+  },
+  "taf": {
+   "ok": true,
+   "ms": 2
+  },
+  "nws_points": {
+   "ok": true,
+   "ms": 2
+  },
+  "nws_alerts": {
+   "ok": true,
+   "ms": 2
+  },
+  "kp": {
+   "ok": true,
+   "ms": 2
+  },
+  "tfr": {
+   "ok": true,
+   "ms": 22
+  },
+  "nws_hourly": {
+   "ok": true,
+   "ms": 1
+  },
+  "nws_grid": {
+   "ok": true,
+   "ms": 0
+  }
+ },
+ "tfrs": {
+  "local": [
+   {
+    "id": "6/4321",
+    "type": "HAZARDS",
+    "facility": "ZNY",
+    "state": "NJ",
+    "description": "Hillsborough, NJ, Thursday, October 15, 2026 through Friday, October 16, 2026 UTC",
+    "created": "10/14/2026",
+    "detailUrl": "https://tfr.faa.gov/tfr3/?page=detail_6_4321",
+    "altitudes": [
+     "SFC – 2,500 FT MSL"
+    ],
+    "effective": "2026-10-15T12:00:00.000Z",
+    "expires": "2026-10-16T23:59:00.000Z",
+    "title": "Hillsborough, NJ wildfire suppression & aerial operations",
+    "distanceNm": 8.3,
+    "bearingDeg": 275,
+    "inside": false,
+    "compass": "W",
+    "centerDistanceNm": 9.5,
+    "level": 1
+   },
+   {
+    "id": "6/7777",
+    "type": "SPECIAL",
+    "facility": "ZNY",
+    "state": "PA",
+    "description": "Morrisville, PA, Thursday, October 15, 2026 UTC",
+    "created": "10/15/2026",
+    "detailUrl": "https://tfr.faa.gov/tfr3/?page=detail_6_7777",
+    "distanceNm": null,
+    "distanceUnknown": true,
+    "note": "distance unknown — check FAA (no fixture for tfr_detail_6_7777)",
+    "level": 1
+   },
+   {
+    "id": "6/2468",
+    "type": "SECURITY",
+    "facility": "ZNY",
+    "state": "NJ",
+    "description": "Perth Amboy, NJ, Thursday, October 15, 2026 UTC",
+    "created": "10/15/2026",
+    "detailUrl": "https://tfr.faa.gov/tfr3/?page=detail_6_2468",
+    "altitudes": [
+     "SFC – 400 FT AGL"
+    ],
+    "effective": "2026-10-15T13:00:00.000Z",
+    "expires": null,
+    "title": "Perth Amboy, NJ UAS operations prohibited",
+    "distanceNm": null,
+    "bearingDeg": null,
+    "inside": false,
+    "distanceUnknown": true,
+    "note": "distance unknown — check FAA (geometry not parsed)",
+    "level": 1
+   }
+  ],
+  "national": [
+   {
+    "id": "4/3621",
+    "type": "SECURITY",
+    "facility": "FDC",
+    "state": "USA",
+    "description": "Sporting events and stadiums nationwide",
+    "created": "03/01/2024",
+    "detailUrl": "https://tfr.faa.gov/tfr3/?page=detail_4_3621"
+   },
+   {
+    "id": "1/1155",
+    "type": "SECURITY",
+    "facility": "FDC",
+    "state": "DC",
+    "description": "Washington, DC Special Flight Rules Area",
+    "created": "01/01/2021",
+    "detailUrl": "https://tfr.faa.gov/tfr3/?page=detail_1_1155"
+   }
+  ],
+  "checked": 4
+ },
+ "metars": [
+  {
+   "station": "KSMQ",
+   "name": "Somerville/Somerset Arpt, NJ, US",
+   "raw": "METAR KSMQ 151746Z 29009KT 10SM SCT045 16/04 A3001",
+   "obsTime": "2026-10-15T17:46:00.000Z",
+   "windDir": 290,
+   "windKt": 9,
+   "gustKt": null,
+   "visibilitySm": 10,
+   "visibilityPlus": true,
+   "ceilingFt": null,
+   "clouds": [
+    {
+     "cover": "SCT",
+     "base": 4500
+    }
+   ],
+   "tempC": 16.1,
+   "dewC": 4.4,
+   "altimHpa": 1016.3,
+   "wx": "",
+   "flightCategory": "VFR",
+   "level": 0,
+   "flags": []
+  },
+  {
+   "station": "KEWR",
+   "name": "Newark Liberty Intl, NJ, US",
+   "raw": "METAR KEWR 151751Z 30014G22KT 10SM FEW050 BKN080 17/04 A3000 RMK AO2 PK WND 30027/1712 SLP160",
+   "obsTime": "2026-10-15T17:50:00.000Z",
+   "windDir": 300,
+   "windKt": 14,
+   "gustKt": 22,
+   "visibilitySm": 10,
+   "visibilityPlus": true,
+   "ceilingFt": 8000,
+   "clouds": [
+    {
+     "cover": "FEW",
+     "base": 5000
+    },
+    {
+     "cover": "BKN",
+     "base": 8000
+    }
+   ],
+   "tempC": 17.2,
+   "dewC": 3.9,
+   "altimHpa": 1016.3,
+   "wx": "",
+   "flightCategory": "VFR",
+   "level": 1,
+   "flags": [
+    "gust 22 kt"
+   ]
+  },
+  {
+   "station": "KTTN",
+   "name": "Trenton-Mercer Arpt, NJ, US",
+   "raw": "METAR KTTN 151753Z VRB04KT 6SM HZ OVC031 16/06 A3002 RMK AO2 SLP165",
+   "obsTime": "2026-10-15T17:50:00.000Z",
+   "windDir": "VRB",
+   "windKt": 4,
+   "gustKt": null,
+   "visibilitySm": 6,
+   "visibilityPlus": false,
+   "ceilingFt": 3100,
+   "clouds": [
+    {
+     "cover": "OVC",
+     "base": 3100
+    }
+   ],
+   "tempC": 15.6,
+   "dewC": 6.1,
+   "altimHpa": 1016.3,
+   "wx": "HZ",
+   "flightCategory": "VFR",
+   "level": 0,
+   "flags": []
+  }
+ ],
+ "tafs": [
+  {
+   "station": "KEWR",
+   "raw": "TAF KEWR 151720Z 1518/1624 30014G22KT P6SM FEW050 BKN080\n  FM160000 31010KT P6SM SCT060\n  FM161400 33008KT P6SM FEW250",
+   "issued": "2026-10-15T17:20:00.000Z"
+  },
+  {
+   "station": "KTTN",
+   "raw": "TAF KTTN 151720Z 1518/1618 VRB05KT 6SM HZ OVC030\n  FM152200 29008KT P6SM SCT040\n  FM160600 VRB03KT P6SM SKC",
+   "issued": "2026-10-15T17:20:00.000Z"
+  }
+ ],
+ "hourly": [
+  {
+   "start": "2026-10-15T17:00:00.000Z",
+   "windDir": "NW",
+   "windKt": 9,
+   "gustKt": 18,
+   "precipPct": 5,
+   "tempF": 62,
+   "short": "Partly Sunny",
+   "level": 0,
+   "flags": []
+  },
+  {
+   "start": "2026-10-15T18:00:00.000Z",
+   "windDir": "NW",
+   "windKt": 10,
+   "gustKt": 20,
+   "precipPct": 5,
+   "tempF": 61,
+   "short": "Partly Sunny",
+   "level": 1,
+   "flags": [
+    "gust 20 kt"
+   ]
+  },
+  {
+   "start": "2026-10-15T19:00:00.000Z",
+   "windDir": "NW",
+   "windKt": 12,
+   "gustKt": 22,
+   "precipPct": 10,
+   "tempF": 60,
+   "short": "Partly Sunny",
+   "level": 1,
+   "flags": [
+    "gust 22 kt"
+   ]
+  },
+  {
+   "start": "2026-10-15T20:00:00.000Z",
+   "windDir": "NW",
+   "windKt": 16,
+   "gustKt": 24,
+   "precipPct": 20,
+   "tempF": 59,
+   "short": "Partly Sunny",
+   "level": 1,
+   "flags": [
+    "wind 16 kt",
+    "gust 24 kt"
+   ]
+  },
+  {
+   "start": "2026-10-15T21:00:00.000Z",
+   "windDir": "NW",
+   "windKt": 13,
+   "gustKt": 21,
+   "precipPct": 35,
+   "tempF": 58,
+   "short": "Chance Showers And Thunderstorms",
+   "level": 1,
+   "flags": [
+    "gust 21 kt",
+    "precip 35%"
+   ]
+  },
+  {
+   "start": "2026-10-15T22:00:00.000Z",
+   "windDir": "NW",
+   "windKt": 9,
+   "gustKt": 16,
+   "precipPct": 40,
+   "tempF": 57,
+   "short": "Chance Showers And Thunderstorms",
+   "level": 1,
+   "flags": [
+    "precip 40%"
+   ]
+  }
+ ],
+ "alerts": [
+  {
+   "event": "Wind Advisory",
+   "severity": "Moderate",
+   "urgency": "Expected",
+   "headline": "Wind Advisory issued October 15 at 11:02AM EDT until October 15 at 8:00PM EDT by NWS Mount Holly NJ",
+   "description": "* WHAT...Northwest winds 15 to 25 mph with gusts up to 45 mph expected.\n\n* WHERE...Middlesex and Somerset counties.",
+   "instruction": "Use extra caution when driving, especially if operating a high profile vehicle.",
+   "onset": "2026-10-15T16:00:00+00:00",
+   "ends": "2026-10-15T20:00:00+00:00",
+   "sender": "NWS Mount Holly NJ",
+   "url": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.sample1",
+   "level": 1
+  },
+  {
+   "event": "Special Weather Statement",
+   "severity": "Minor",
+   "urgency": "Expected",
+   "headline": "Special Weather Statement issued October 15 by NWS Mount Holly NJ",
+   "description": "Elevated fire danger this afternoon.",
+   "onset": "2026-10-15T15:00:00+00:00",
+   "ends": "2026-10-15T21:00:00+00:00",
+   "sender": "NWS Mount Holly NJ",
+   "url": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.sample2",
+   "level": 0
+  }
+ ],
+ "kp": {
+  "kp": 2.67,
+  "time": "2026-10-15T16:00:00.000Z",
+  "max24h": 2.67,
+  "level": 0
+ },
+ "nws": {
+  "office": "PHI",
+  "forecastUrl": "https://forecast.weather.gov/MapClick.php?lat=40.4862&lon=-74.4518"
+ }
+}

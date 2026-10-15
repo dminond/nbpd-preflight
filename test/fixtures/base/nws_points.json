@@ -1,0 +1,16 @@
+{
+ "properties": {
+  "gridId": "PHI",
+  "gridX": 63,
+  "gridY": 104,
+  "cwa": "PHI",
+  "forecastHourly": "https://api.weather.gov/gridpoints/PHI/63,104/forecast/hourly",
+  "forecastGridData": "https://api.weather.gov/gridpoints/PHI/63,104",
+  "relativeLocation": {
+   "properties": {
+    "city": "New Brunswick",
+    "state": "NJ"
+   }
+  }
+ }
+}

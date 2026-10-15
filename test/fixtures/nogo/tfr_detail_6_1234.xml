@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<XNOTAM-Update version="2.0" origin="USNS">
+ <Group><Add><Not>
+  <NotUid><txtLocalName>6/1234</txtLocalName><codeFacility>ZNY</codeFacility></NotUid>
+  <dateEffective>2026-10-15T16:00:00</dateEffective>
+  <dateExpire>2026-10-18T22:00:00</dateExpire>
+  <codeTimeZone>EDT</codeTimeZone>
+  <txtDescrUSNS>Bedminster, NJ VIP movement</txtDescrUSNS>
+  <TFRNot><codeType>VIP</codeType>
+   <TFRAreaGroup>
+    <aseTFRArea><txtName>Area A</txtName>
+     <valDistVerLower>0</valDistVerLower><uomDistVerLower>FT</uomDistVerLower><codeDistVerLower>HEI</codeDistVerLower>
+     <valDistVerUpper>17999</valDistVerUpper><uomDistVerUpper>FT</uomDistVerUpper><codeDistVerUpper>ALT</codeDistVerUpper>
+    </aseTFRArea>
+    <abdMergedArea>
+     <Avx><codeDatum>WGE</codeDatum><codeType>CIR</codeType><geoLat>403900N</geoLat><geoLong>0743800W</geoLong><geoLatArc>403900N</geoLatArc><geoLongArc>0743800W</geoLongArc><valRadiusArc>10</valRadiusArc><uomRadiusArc>NM</uomRadiusArc></Avx>
+    </abdMergedArea>
+   </TFRAreaGroup>
+  </TFRNot>
+ </Not></Add></Group>
+</XNOTAM-Update>

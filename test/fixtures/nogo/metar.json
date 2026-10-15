@@ -1,0 +1,60 @@
+[
+ {
+  "icaoId": "KSMQ",
+  "receiptTime": "",
+  "obsTime": 1792086240,
+  "reportTime": "2026-10-15T17:44:00Z",
+  "temp": 12,
+  "dewp": 11,
+  "wdir": 270,
+  "wspd": 18,
+  "wgst": 27,
+  "visib": "2 1/2",
+  "altim": 1016.3,
+  "wxString": "-TSRA BR",
+  "metarType": "METAR",
+  "rawOb": "METAR KSMQ 151744Z 27018G27KT 2 1/2SM -TSRA BR BKN008 OVC015CB 12/11 A2981",
+  "lat": 0,
+  "lon": 0,
+  "elev": 0,
+  "name": "Somerville/Somerset Arpt, NJ, US",
+  "clouds": [
+   {
+    "cover": "BKN",
+    "base": 800
+   },
+   {
+    "cover": "OVC",
+    "base": 1500
+   }
+  ],
+  "fltCat": "IFR"
+ },
+ {
+  "icaoId": "KEWR",
+  "receiptTime": "",
+  "obsTime": 1792086600,
+  "reportTime": "2026-10-15T17:50:00Z",
+  "temp": 13,
+  "dewp": 11,
+  "wdir": 260,
+  "wspd": 21,
+  "wgst": 30,
+  "visib": 4,
+  "altim": 1016.3,
+  "wxString": "RA",
+  "metarType": "METAR",
+  "rawOb": "METAR KEWR 151751Z 26021G30KT 4SM RA OVC012 13/11 A2980",
+  "lat": 0,
+  "lon": 0,
+  "elev": 0,
+  "name": "Newark Liberty Intl, NJ, US",
+  "clouds": [
+   {
+    "cover": "OVC",
+    "base": 1200
+   }
+  ],
+  "fltCat": "MVFR"
+ }
+]

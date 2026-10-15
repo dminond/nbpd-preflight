@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<XNOTAM-Update version="2.0" origin="USNS">
+ <Group><Add><Not>
+  <NotUid><txtLocalName>6/2468</txtLocalName><codeFacility>ZNY</codeFacility></NotUid>
+  <dateEffective>2026-10-15T13:00:00</dateEffective>
+  
+  <codeTimeZone>EDT</codeTimeZone>
+  <txtDescrUSNS>Perth Amboy, NJ UAS operations prohibited</txtDescrUSNS>
+  <TFRNot><codeType>SECURITY</codeType>
+   <TFRAreaGroup>
+    <aseTFRArea><txtName>Area A</txtName>
+     <valDistVerLower>0</valDistVerLower><uomDistVerLower>FT</uomDistVerLower><codeDistVerLower>HEI</codeDistVerLower>
+     <valDistVerUpper>400</valDistVerUpper><uomDistVerUpper>FT</uomDistVerUpper><codeDistVerUpper>HEI</codeDistVerUpper>
+    </aseTFRArea>
+    <abdMergedArea>
+
+    </abdMergedArea>
+   </TFRAreaGroup>
+  </TFRNot>
+ </Not></Add></Group>
+</XNOTAM-Update>

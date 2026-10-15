@@ -1,0 +1,25 @@
+{
+  "name": "NBPD UAS Pre-Flight",
+  "center": { "lat": 40.4862, "lon": -74.4518, "label": "New Brunswick, NJ" },
+  "timeZone": "America/New_York",
+  "tfrRadiusNm": 30,
+  "tfrStates": ["NJ", "NY", "PA"],
+  "stations": ["KSMQ", "KEWR", "KTTN"],
+  "forecastHours": 6,
+  "staleMinutes": 30,
+  "tfrDetailXmlUrls": [
+    "https://tfr.faa.gov/download/detail_{id}.xml",
+    "https://tfr.faa.gov/save_pages/detail_{id}.xml"
+  ],
+  "tfrDetailPageUrl": "https://tfr.faa.gov/tfr3/?page=detail_{id}",
+  "thresholds": {
+    "windKt":        { "caution": 15,   "nogo": 20 },
+    "gustKt":        { "caution": 20,   "nogo": 25 },
+    "visibilitySm":  { "caution": 5,    "nogo": 3 },
+    "ceilingFtAgl":  { "caution": 1500, "nogo": 900 },
+    "precipPct":     { "caution": 30 },
+    "kp":            { "caution": 4,    "nogo": 5 },
+    "tfrNm":         { "nogo": 5 },
+    "metarMaxAgeMin": 90
+  }
+}
