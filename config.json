@@ -5,6 +5,7 @@
   "tfrRadiusNm": 30,
   "tfrStates": ["NJ", "NY", "PA"],
   "stations": ["KSMQ", "KEWR", "KTTN"],
+  "tafStations": ["KEWR", "KTTN"],
   "forecastHours": 6,
   "staleMinutes": 30,
   "tfrDetailXmlUrls": [

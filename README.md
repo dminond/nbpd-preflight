@@ -24,7 +24,8 @@ Note: GitHub sometimes delays scheduled workflows by several minutes or more whe
 | `center.lat`, `center.lon` | Reference point for TFR distances, NWS forecast/alerts and sun times. Default: 40.4862, -74.4518. |
 | `tfrRadiusNm` | Local TFRs farther than this are dropped. Default: 30. |
 | `tfrStates` | FAA list `state` values checked for local TFRs. |
-| `stations` | METAR/TAF stations, listed in display order. |
+| `stations` | METAR stations, listed in display order. |
+| `tafStations` | Stations to request TAFs for (only airports that issue one; KSMQ does not). Defaults to `stations`. |
 | `forecastHours` | Number of hourly forecast rows shown. |
 | `staleMinutes` | Age after which the page shows DATA STALE. |
 | `thresholds` | Caution and no-go-review limits (see below). |

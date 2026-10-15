@@ -86,29 +86,29 @@
   ]
  },
  "sources": {
-  "taf": {
+  "nws_points": {
    "ok": true,
-   "ms": 2
+   "ms": 3
   },
   "metar": {
    "ok": true,
-   "ms": 2
-  },
-  "nws_points": {
-   "ok": true,
-   "ms": 2
+   "ms": 3
   },
   "nws_alerts": {
    "ok": true,
-   "ms": 2
+   "ms": 3
   },
   "kp": {
    "ok": true,
-   "ms": 1
+   "ms": 3
   },
   "tfr": {
    "ok": true,
-   "ms": 20
+   "ms": 33
+  },
+  "taf": {
+   "ok": true,
+   "ms": 29
   },
   "nws_hourly": {
    "ok": true,

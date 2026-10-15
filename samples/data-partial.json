@@ -113,17 +113,17 @@
   },
   "tfr": {
    "ok": true,
-   "ms": 2
-  },
-  "taf": {
-   "ok": true,
-   "ms": 1
+   "ms": 0
   },
   "metar": {
    "ok": true,
-   "ms": 1
+   "ms": 0
   },
   "nws_alerts": {
+   "ok": true,
+   "ms": 0
+  },
+  "taf": {
    "ok": true,
    "ms": 1
   },

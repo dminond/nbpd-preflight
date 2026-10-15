@@ -42,7 +42,7 @@ function makeTransport({ fixtures, fail }) {
   const contact = process.env.NWS_CONTACT || 'contact-not-set';
   const nwsUA = `(nbpd-uas-preflight, ${contact})`;
 
-  async function get(key, url, { accept, nws } = {}) {
+  async function get(key, url, { accept, nws, timeoutMs = TIMEOUT_MS, retries = 0 } = {}) {
     if (fail.some(f => key === f || key.startsWith(f + '_'))) throw new Error('simulated failure (--fail)');
     if (fixtures) {
       const file = key.replace(/[^\w.-]/g, '_');
@@ -58,18 +58,28 @@ function makeTransport({ fixtures, fail }) {
     // NWS requires an identifying User-Agent; send the same one everywhere.
     headers['User-Agent'] = nwsUA;
     if (nws) headers['Accept'] = 'application/geo+json';
+    for (let attempt = 0; ; attempt++) {
+      try { return await fetchOnce(url, headers, timeoutMs); } catch (e) {
+        // Retry only transient failures (timeouts, 5xx), never 4xx request errors.
+        if (attempt >= retries || !(e.transient)) throw attempt ? new Error(`${e.message} (after ${attempt + 1} attempts)`) : e;
+        await new Promise(r => setTimeout(r, 2000));
+      }
+    }
+  }
+  async function fetchOnce(url, headers, timeoutMs) {
     const ctl = new AbortController();
-    const t = setTimeout(() => ctl.abort(), TIMEOUT_MS);
+    const t = setTimeout(() => ctl.abort(), timeoutMs);
     try {
       const res = await fetch(url, { headers, signal: ctl.signal });
       if (!res.ok) {
         const detail = (await res.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 160);
-        throw new Error(`HTTP ${res.status} from ${new URL(url).host}${detail ? ': ' + detail : ''}`);
+        throw Object.assign(new Error(`HTTP ${res.status} from ${new URL(url).host}${detail ? ': ' + detail : ''}`), { transient: res.status >= 500 });
       }
       return await res.text();
     } catch (e) {
-      if (e.name === 'AbortError') throw new Error(`timeout after ${TIMEOUT_MS / 1000}s (${new URL(url).host})`);
-      throw new Error(e.cause?.code ? `${e.message} (${e.cause.code})` : e.message);
+      if (e.transient !== undefined) throw e;
+      if (e.name === 'AbortError') throw Object.assign(new Error(`timeout after ${timeoutMs / 1000}s (${new URL(url).host})`), { transient: true });
+      throw Object.assign(new Error(e.cause?.code ? `${e.message} (${e.cause.code})` : e.message), { transient: true });
     } finally {
       clearTimeout(t);
     }
@@ -498,13 +508,17 @@ export async function run(args) {
   }
 
   const ids = cfg.stations.join(',');
+  // Only airports that issue a TAF (KSMQ does not); asking for others just adds server work.
+  const tafIds = (cfg.tafStations || cfg.stations).join(',');
   const awc = 'https://aviationweather.gov/api/data';
   const nwsPoint = `${lat.toFixed(4)},${lon.toFixed(4)}`;
 
+  let awcChain;
   const [tfrs, metarRaw, tafRaw, points, alertsRaw, kpRaw] = await Promise.all([
     step('tfr', () => fetchTfrs(cfg, T, now, reasons)),
-    step('metar', () => T.getJSON('metar', `${awc}/metar?ids=${ids}&format=json`)),
-    step('taf', () => T.getJSON('taf', `${awc}/taf?ids=${ids}&format=json`)),
+    // aviationweather.gov asks clients to space requests, so METAR then TAF in sequence.
+    awcChain = step('metar', () => T.getJSON('metar', `${awc}/metar?ids=${ids}&format=json`, { retries: 1 })),
+    awcChain.then(() => step('taf', () => T.getJSON('taf', `${awc}/taf?ids=${tafIds}&format=json`, { timeoutMs: 30000, retries: 1 }))),
     step('nws_points', () => T.getJSON('nws_points', `https://api.weather.gov/points/${nwsPoint}`, { nws: true })),
     step('nws_alerts', () => T.getJSON('nws_alerts', `https://api.weather.gov/alerts/active?point=${nwsPoint}`, { nws: true })),
     step('kp', () => T.getJSON('kp', 'https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json')),
