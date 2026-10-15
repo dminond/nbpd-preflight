@@ -33,7 +33,7 @@ const now = new Date('2026-10-15T17:50:00Z');
 const full = await run({ config: 'config.json', out, fixtures: ['test/fixtures/base'], now, fail: [] });
 checkShape(full);
 assert.equal(full.overall.level, 'CAUTION');
-assert.equal(full.tfrs.local.length, 3, 'Buffalo TFR filtered out by radius');
+assert.equal(full.tfrs.local.length, 4, 'Buffalo TFR filtered out by radius');
 assert.equal(full.tfrs.national.length, 2);
 assert.equal(full.hourly.length, 6);
 

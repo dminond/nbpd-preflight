@@ -32,6 +32,14 @@
   "creation_date": "10/15/2026"
  },
  {
+  "notam_id": "6/3333",
+  "type": "HAZARDS",
+  "facility": "ZNY",
+  "state": "NJ",
+  "description": "Edison, NJ, Thursday, October 15, 2026 UTC",
+  "creation_date": "10/15/2026"
+ },
+ {
   "notam_id": "4/3621",
   "type": "SECURITY",
   "facility": "FDC",

@@ -54,6 +54,13 @@
       href ? h('a', { href: href, target: '_blank', rel: 'noopener', text: 'Check official source' }) : null);
   }
   function cToF(c) { return c == null ? null : Math.round(c * 9 / 5 + 32); }
+  // "Now" on the data's own clock: real time, except sample files are replayed as if
+  // they were generated age_minutes ago, so their fixed timestamps keep making sense.
+  function dataNow() {
+    var d = state.data;
+    if (d && d.sample && d.sample.age_minutes != null) return Date.parse(d.generated_at) + d.sample.age_minutes * 60000 + (Date.now() - state.loadedAt);
+    return Date.now();
+  }
   function generatedAt(d) {
     // Sample files carry a fixed age so the preview always looks "N minutes old".
     if (d.sample && d.sample.age_minutes != null) return new Date(state.loadedAt - d.sample.age_minutes * 60000);
@@ -93,6 +100,21 @@
   }
 
   // ------------------------------------------------------------ TFRs
+  var SOON_MS = 3 * 3600 * 1000; // highlight TFRs starting within 3 hours
+  function dur(ms) {
+    var m = Math.max(1, Math.round(ms / 60000));
+    if (m < 60) return m + ' min';
+    if (m < 48 * 60) return Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + (m % 60) + ' min' : '');
+    return Math.round(m / 1440) + ' days';
+  }
+  // Computed in the browser so it stays correct between data refreshes.
+  function tfrStatus(t, now) {
+    var s = t.effective ? Date.parse(t.effective) : NaN, e = t.expires ? Date.parse(t.expires) : NaN;
+    if (!isNaN(e) && now >= e) return { key: 'ended', text: 'ENDED ' + dur(now - e) + ' ago — confirm on FAA' };
+    if (!isNaN(s) && now < s) return { key: s - now <= SOON_MS ? 'soon' : 'upcoming', text: 'STARTS IN ' + dur(s - now) };
+    if (!isNaN(s) || !isNaN(e)) return { key: 'active', text: 'ACTIVE NOW' + (!isNaN(e) ? ' · ends in ' + dur(e - now) : ' · no end time') };
+    return { key: 'unknown', text: 'TIMES UNKNOWN — check FAA' };
+  }
   function renderTfr() {
     var d = state.data, b = body('s-tfr');
     var radius = (d.config && d.config.tfrRadiusNm) || 30;
@@ -112,6 +134,7 @@
           h('strong', { text: t.type || '' }),
           tag(t.level || 1)),
         h('div', { class: 'big', text: where }),
+        (function () { var st = tfrStatus(t, dataNow()); return h('div', { class: 'st st-' + st.key, text: st.text }); })(),
         h('dl', { class: 'kv' },
           h('dt', { text: 'Altitudes' }), h('dd', { text: (t.altitudes && t.altitudes.length) ? t.altitudes.join('; ') : 'see FAA detail' }),
           h('dt', { text: 'Window' }), h('dd', { text: win })),
@@ -242,8 +265,32 @@
     append(b, h('div', { class: 'muted', text: 'Generated ' + d.generated_at + ' · page refreshes data every 5 min' }));
   }
 
+  // Which overall-banner reasons and data sources belong to each collapsible card.
+  var CARDS = {
+    's-tfr': ['tfr'],
+    's-metar': ['metar'],
+    's-fcst': ['forecast', 'nws_points', 'nws_hourly', 'taf'],
+    's-alerts': ['nws_alerts'],
+    's-sky': ['kp'],
+  };
+  function renderContributions() {
+    var d = state.data;
+    Object.keys(CARDS).forEach(function (id) {
+      var chip = document.querySelector('#' + id + ' .contrib');
+      if (!d) { chip.className = 'contrib tag lv-x'; chip.textContent = 'NO DATA'; return; }
+      var keys = CARDS[id];
+      var lvl = ((d.overall && d.overall.reasons) || []).reduce(function (m, r) {
+        return keys.indexOf(r.source) >= 0 ? Math.max(m, r.level) : m;
+      }, 0);
+      var failed = keys.some(function (k) { return d.sources && d.sources[k] && !d.sources[k].ok; });
+      chip.className = 'contrib tag lv-' + lvl;
+      chip.textContent = failed && lvl < 2 ? 'UNAVAILABLE' : LEVELS[lvl];
+    });
+  }
+
   function render() {
     renderBanner();
+    renderContributions();
     if (!state.data) return;
     if (state.data.nws && state.data.nws.forecastUrl) document.getElementById('nws-link').href = state.data.nws.forecastUrl;
     [renderTfr, renderMetar, renderForecast, renderAlerts, renderSky, renderSources].forEach(function (fn) {
@@ -281,6 +328,9 @@
   });
   load();
   setInterval(load, POLL_MS);
-  setInterval(renderBanner, TICK_MS); // keep the age / stale indicator honest between polls
+  setInterval(function () { // keep the age / stale indicator and TFR status labels honest between polls
+    renderBanner();
+    if (state.data) try { renderTfr(); } catch (e) { console.error(e); }
+  }, TICK_MS);
   document.addEventListener('visibilitychange', function () { if (!document.hidden && Date.now() - state.loadedAt > 60000) load(); });
 })();
