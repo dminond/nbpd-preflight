@@ -148,15 +148,15 @@
  "sources": {
   "metar": {
    "ok": true,
-   "ms": 2
+   "ms": 1
   },
   "taf": {
    "ok": true,
-   "ms": 2
+   "ms": 1
   },
   "nws_points": {
    "ok": true,
-   "ms": 2
+   "ms": 1
   },
   "nws_alerts": {
    "ok": true,
@@ -168,7 +168,7 @@
   },
   "tfr": {
    "ok": true,
-   "ms": 4
+   "ms": 3
   },
   "nws_hourly": {
    "ok": true,

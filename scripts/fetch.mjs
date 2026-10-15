@@ -62,7 +62,10 @@ function makeTransport({ fixtures, fail }) {
     const t = setTimeout(() => ctl.abort(), TIMEOUT_MS);
     try {
       const res = await fetch(url, { headers, signal: ctl.signal });
-      if (!res.ok) throw new Error(`HTTP ${res.status} from ${new URL(url).host}`);
+      if (!res.ok) {
+        const detail = (await res.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 160);
+        throw new Error(`HTTP ${res.status} from ${new URL(url).host}${detail ? ': ' + detail : ''}`);
+      }
       return await res.text();
     } catch (e) {
       if (e.name === 'AbortError') throw new Error(`timeout after ${TIMEOUT_MS / 1000}s (${new URL(url).host})`);
@@ -73,6 +76,7 @@ function makeTransport({ fixtures, fail }) {
   }
   const getJSON = async (key, url, opts) => {
     const txt = await get(key, url, opts);
+    if (!txt.trim()) return []; // aviationweather.gov answers 204 (empty body) when there is no data
     try { return JSON.parse(txt); } catch { throw new Error(`invalid JSON from ${key}`); }
   };
   return { get, getJSON };
@@ -353,16 +357,28 @@ function flightCategory(visSm, ceilFt) {
 }
 const PRECIP_RE = /(^|\s)[-+]?(?!VC)(?:MI|PR|BC|DR|BL|SH|TS|FZ)?(?:DZ|RA|SN|SG|IC|PL|GR|GS|UP)+|(^|\s)[-+]?TS/;
 
-function decodeMetar(m, now, th, reasons) {
-  const clouds = (m.clouds || []).map(c => ({ cover: c.cover, base: num(c.base) }));
+// obsTime/reportTime may be epoch seconds, epoch ms or an ISO string; never throw on any of them.
+export function metarTime(m) {
+  for (const v of [m.obsTime, m.reportTime, m.receiptTime]) {
+    if (v == null || v === '') continue;
+    let d;
+    if (typeof v === 'number' || /^\d+(\.\d+)?$/.test(String(v))) { const n = Number(v); d = new Date(n > 1e12 ? n : n * 1000); }
+    else d = new Date(/Z|[+-]\d\d:?\d\d$/.test(v) ? v : String(v).replace(' ', 'T') + 'Z');
+    if (!Number.isNaN(d.getTime())) return d.toISOString();
+  }
+  return null;
+}
+
+export function decodeMetar(m, now, th, reasons) {
+  const clouds = (Array.isArray(m.clouds) ? m.clouds : []).map(c => ({ cover: String(c?.cover || '').toUpperCase(), base: num(c?.base) }));
   const ceil = clouds.filter(c => ['BKN', 'OVC', 'OVX', 'VV'].includes(c.cover) && c.base != null).map(c => c.base);
   const ceilingFt = ceil.length ? Math.min(...ceil) : null;
   const visibilitySm = parseVis(m.visib);
-  const obsTime = m.obsTime ? new Date(Number(m.obsTime) * 1000).toISOString() : toIsoUtc(m.reportTime);
-  const wx = m.wxString || '';
+  const obsTime = metarTime(m);
+  const wx = typeof m.wxString === 'string' ? m.wxString : '';
   const d = {
     station: m.icaoId, name: m.name || null, raw: m.rawOb, obsTime,
-    windDir: m.wdir === 'VRB' ? 'VRB' : num(m.wdir), windKt: num(m.wspd), gustKt: num(m.wgst),
+    windDir: String(m.wdir).toUpperCase() === 'VRB' ? 'VRB' : num(m.wdir), windKt: num(m.wspd), gustKt: num(m.wgst),
     visibilitySm, visibilityPlus: typeof m.visib === 'string' && m.visib.includes('+'),
     ceilingFt, clouds, tempC: num(m.temp), dewC: num(m.dewp), altimHpa: num(m.altim), wx,
     flightCategory: m.fltCat || flightCategory(visibilitySm, ceilingFt), level: 0, flags: [],
@@ -508,11 +524,16 @@ export async function run(args) {
   }
 
   const metars = metarRaw ? await step('metar_decode', async () => {
-    const arr = Array.isArray(metarRaw) ? metarRaw : [];
+    const arr = Array.isArray(metarRaw) ? metarRaw : Array.isArray(metarRaw?.features) ? metarRaw.features.map(f => f.properties || {}) : [];
     return cfg.stations.map(id => {
-      const m = arr.filter(x => x.icaoId === id).sort((a, b) => (b.obsTime || 0) - (a.obsTime || 0))[0];
+      const ts = x => Date.parse(metarTime(x) || 0) || 0;
+      const m = arr.filter(x => String(x.icaoId || x.stationId || '').toUpperCase() === id).sort((a, b) => ts(b) - ts(a))[0];
       if (!m) { reasons.push({ level: 1, source: 'metar', text: `${id}: no current METAR` }); return { station: id, missing: true, level: 1, flags: ['no current METAR'] }; }
-      return decodeMetar(m, now, th, reasons);
+      // One malformed report must not take the other stations down with it.
+      try { return decodeMetar(m, now, th, reasons); } catch (e) {
+        reasons.push({ level: 1, source: 'metar', text: `${id}: METAR could not be decoded` });
+        return { station: id, raw: m.rawOb || null, level: 1, flags: [`could not decode (${e.message})`], decodeError: true };
+      }
     });
   }) : null;
   if (sources.metar_decode?.ok) delete sources.metar_decode;
