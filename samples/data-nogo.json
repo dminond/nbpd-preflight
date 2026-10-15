@@ -146,15 +146,11 @@
   ]
  },
  "sources": {
-  "metar": {
-   "ok": true,
-   "ms": 1
-  },
-  "taf": {
-   "ok": true,
-   "ms": 1
-  },
   "nws_points": {
+   "ok": true,
+   "ms": 1
+  },
+  "metar": {
    "ok": true,
    "ms": 1
   },
@@ -168,15 +164,19 @@
   },
   "tfr": {
    "ok": true,
-   "ms": 3
+   "ms": 4
   },
-  "nws_hourly": {
+  "taf": {
    "ok": true,
-   "ms": 1
+   "ms": 4
   },
   "nws_grid": {
    "ok": true,
-   "ms": 1
+   "ms": 0
+  },
+  "nws_hourly": {
+   "ok": true,
+   "ms": 0
   }
  },
  "tfrs": {
