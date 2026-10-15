@@ -2,7 +2,7 @@
   "name": "NBPD UAS Pre-Flight",
   "center": { "lat": 40.4862, "lon": -74.4518, "label": "New Brunswick, NJ" },
   "timeZone": "America/New_York",
-  "tfrRadiusNm": 30,
+  "tfrRadiusNm": 8,
   "tfrStates": ["NJ", "NY", "PA"],
   "stations": ["KSMQ", "KEWR", "KTTN"],
   "forecastHours": 6,
