@@ -120,5 +120,6 @@ index.html  app.js  suncalc.js   page (vanilla JS/CSS, no build, no CDN)
 config.json                      hand-edited settings
 scripts/fetch.mjs                fetch + filter + thresholds -> data.json
 .github/workflows/refresh.yml    cron every 10 min + manual run -> GitHub Pages
+assets/  favicon.ico              NBPD patch: favicon, home-screen icon, header mark
 samples/  test/                  sample data.json files, fixtures, tests
 ```

@@ -39,8 +39,8 @@ jobs:
       - name: Assemble site
         run: |
           mkdir -p _site
-          cp index.html app.js suncalc.js config.json data.json _site/
-          cp -r samples _site/
+          cp index.html app.js suncalc.js config.json data.json favicon.ico _site/
+          cp -r assets samples _site/
 
       - uses: actions/configure-pages@v5
 
