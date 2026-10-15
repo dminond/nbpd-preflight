@@ -7,6 +7,9 @@
 <meta name="robots" content="noindex">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#000000">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <style>
 :root {
   --bg: #000; --fg: #fff; --muted: #c8c8c8; --card: #111; --line: #3a3a3a; --link: #7cc4ff;
@@ -27,6 +30,8 @@ body {
 main { max-width: 760px; margin: 0 auto; }
 a { color: var(--link); }
 h1 { font-size: 1rem; font-weight: 600; margin: 10px 0 6px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand img { flex: none; display: block; }
 h2 { font-size: 1.15rem; margin: 0 0 8px; }
 .mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .85rem; word-break: break-word; white-space: pre-wrap; }
 .muted { color: var(--muted); }
@@ -89,7 +94,7 @@ footer { font-size: .85rem; color: var(--muted); margin-top: 16px; border-top: 1
 <body>
 <main>
   <div id="sample" hidden>SAMPLE DATA — NOT LIVE</div>
-  <h1><span id="title">NBPD UAS Pre-Flight</span><button id="theme" type="button" aria-label="Toggle light/dark">Light/Dark</button></h1>
+  <h1><span class="brand"><img src="assets/patch-96.png" width="32" height="40" alt="New Brunswick Police patch"><span id="title">NBPD UAS Pre-Flight</span></span><button id="theme" type="button" aria-label="Toggle light/dark">Light/Dark</button></h1>
 
   <div id="banner" class="lv-x" role="status" aria-live="polite">
     <div class="lvl">LOADING…</div>
