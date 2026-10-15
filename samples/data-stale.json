@@ -108,15 +108,15 @@
   },
   "tfr": {
    "ok": true,
-   "ms": 3
-  },
-  "nws_hourly": {
-   "ok": true,
    "ms": 2
   },
   "nws_grid": {
    "ok": true,
-   "ms": 2
+   "ms": 0
+  },
+  "nws_hourly": {
+   "ok": true,
+   "ms": 0
   }
  },
  "tfrs": {

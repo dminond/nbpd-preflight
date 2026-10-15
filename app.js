@@ -136,6 +136,11 @@
     if (!srcOk('metar') || !d.metars) { append(b, srcErr('metar', 'METAR', 'https://aviationweather.gov/data/metar/')); return; }
     d.metars.forEach(function (m) {
       if (m.missing) { append(b, h('div', { class: 'item' }, h('div', { class: 'row' }, h('span', { class: 'big', text: m.station }), tag(1)), h('div', { text: 'No current METAR' }))); return; }
+      if (m.decodeError) {
+        append(b, h('div', { class: 'item' }, h('div', { class: 'row' }, h('span', { class: 'big', text: m.station }), tag(1)),
+          h('div', { text: 'Could not decode this report — read the raw METAR.' }), h('div', { class: 'mono', text: m.raw || '' })));
+        return;
+      }
       var wind = m.windKt === 0 ? 'Calm' : (m.windDir === 'VRB' ? 'VRB' : (m.windDir != null ? String(m.windDir).padStart(3, '0') + '°' : '—')) + ' ' + (m.windKt != null ? m.windKt + ' kt' : '—') + (m.gustKt ? ' gust ' + m.gustKt + ' kt' : '');
       var vis = m.visibilitySm == null ? '—' : m.visibilitySm + (m.visibilityPlus ? '+' : '') + ' SM';
       var ceil = m.ceilingFt == null ? 'None' : m.ceilingFt.toLocaleString('en-US') + ' ft AGL';
@@ -144,7 +149,7 @@
           h('span', { class: 'big', text: m.station }),
           m.flightCategory ? h('span', { class: 'cat cat-' + m.flightCategory, text: m.flightCategory }) : null,
           tag(m.level || 0),
-          h('span', { class: 'small muted', text: fmtTime(m.obsTime) + ' · ' + ago(Date.now() - new Date(m.obsTime)) })),
+          h('span', { class: 'small muted', text: m.obsTime ? fmtTime(m.obsTime) + ' · ' + ago(Date.now() - new Date(m.obsTime)) : 'time unknown' })),
         h('dl', { class: 'kv' },
           h('dt', { text: 'Wind' }), h('dd', { text: wind }),
           h('dt', { text: 'Visibility' }), h('dd', { text: vis }),

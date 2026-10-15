@@ -113,13 +113,13 @@
   },
   "tfr": {
    "ok": true,
-   "ms": 1
+   "ms": 2
   },
-  "metar": {
+  "taf": {
    "ok": true,
    "ms": 1
   },
-  "taf": {
+  "metar": {
    "ok": true,
    "ms": 1
   },
