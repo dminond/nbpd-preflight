@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<XNOTAM-Update version="2.0" origin="USNS">
+ <Group><Add><Not>
+  <NotUid><txtLocalName>6/3333</txtLocalName><codeFacility>ZNY</codeFacility></NotUid>
+  <dateEffective>2026-10-15T13:00:00</dateEffective>
+  <dateExpire>2026-10-15T17:00:00</dateExpire>
+  <codeTimeZone>EDT</codeTimeZone>
+  <txtDescrUSNS>Edison, NJ industrial fire</txtDescrUSNS>
+  <TFRNot><codeType>HAZARDS</codeType>
+   <TFRAreaGroup>
+    <aseTFRArea><txtName>Area A</txtName>
+     <valDistVerLower>0</valDistVerLower><uomDistVerLower>FT</uomDistVerLower><codeDistVerLower>ALT</codeDistVerLower>
+     <valDistVerUpper>1500</valDistVerUpper><uomDistVerUpper>FT</uomDistVerUpper><codeDistVerUpper>ALT</codeDistVerUpper>
+    </aseTFRArea>
+    <abdMergedArea>
+     <Avx><codeDatum>WGE</codeDatum><codeType>CIR</codeType><geoLat>403300N</geoLat><geoLong>0742000W</geoLong><geoLatArc>403300N</geoLatArc><geoLongArc>0742000W</geoLongArc><valRadiusArc>1</valRadiusArc><uomRadiusArc>NM</uomRadiusArc></Avx>
+    </abdMergedArea>
+   </TFRAreaGroup>
+  </TFRNot>
+ </Not></Add></Group>
+</XNOTAM-Update>

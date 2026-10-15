@@ -12,6 +12,7 @@ const list = [
   { notam_id: '6/5555', type: 'SECURITY', facility: 'ZOB', state: 'NY', description: 'Buffalo, NY, Thursday, October 15, 2026 UTC', creation_date: '10/13/2026' },
   { notam_id: '6/7777', type: 'SPECIAL', facility: 'ZNY', state: 'PA', description: 'Morrisville, PA, Thursday, October 15, 2026 UTC', creation_date: '10/15/2026' },
   { notam_id: '6/2468', type: 'SECURITY', facility: 'ZNY', state: 'NJ', description: 'Perth Amboy, NJ, Thursday, October 15, 2026 UTC', creation_date: '10/15/2026' },
+  { notam_id: '6/3333', type: 'HAZARDS', facility: 'ZNY', state: 'NJ', description: 'Edison, NJ, Thursday, October 15, 2026 UTC', creation_date: '10/15/2026' },
   { notam_id: '4/3621', type: 'SECURITY', facility: 'FDC', state: 'USA', description: 'Sporting events and stadiums nationwide', creation_date: '03/01/2024' },
   { notam_id: '1/1155', type: 'SECURITY', facility: 'FDC', state: 'DC', description: 'Washington, DC Special Flight Rules Area', creation_date: '01/01/2021' },
   { notam_id: '6/9001', type: 'HAZARDS', facility: 'ZLA', state: 'CA', description: 'Los Angeles, CA wildfire', creation_date: '10/12/2026' },
@@ -50,6 +51,10 @@ w('base', 'tfr_detail_6_4321.xml', tfrXml('6/4321', 'HAZARDS', 'Hillsborough, NJ
 // Buffalo: DMS coordinates, far away -> filtered out.
 w('base', 'tfr_detail_6_5555.xml', tfrXml('6/5555', 'SECURITY', 'Buffalo, NY VIP', '2026-10-15T14:00:00', '2026-10-15T20:00:00', ['0', 'ALT'], ['18000', 'STD'], [
   { lat: '425300N', lon: '0784900W', clat: '425300N', clon: '0784900W', r: '10', t: 'CIR' },
+]));
+// Edison: ended 17:00Z, 50 min before the sample time -> "ENDED".
+w('base', 'tfr_detail_6_3333.xml', tfrXml('6/3333', 'HAZARDS', 'Edison, NJ industrial fire', '2026-10-15T13:00:00', '2026-10-15T17:00:00', ['0', 'ALT'], ['1500', 'ALT'], [
+  { lat: '403300N', lon: '0742000W', clat: '403300N', clon: '0742000W', r: '1', t: 'CIR' },
 ]));
 // 6/7777 detail intentionally absent -> "distance unknown".
 // Perth Amboy: UAS restriction with no usable geometry -> "distance unknown".
@@ -109,7 +114,7 @@ w('nogo', 'kp.json', [['time_tag', 'Kp', 'a_running', 'station_count'], ['2026-1
 
 // No-go TFR: VIP circle 10 NM radius centred ~12 NM NW (Bedminster) -> edge ~2 NM away.
 w('nogo', 'tfr_list.json', [{ notam_id: '6/1234', type: 'VIP', facility: 'ZNY', state: 'NJ', description: 'Bedminster, NJ, Thursday, October 15, 2026 through Sunday, October 18, 2026 UTC', creation_date: '10/10/2026' }, ...list]);
-w('nogo', 'tfr_detail_6_1234.xml', tfrXml('6/1234', 'VIP', 'Bedminster, NJ VIP movement', '2026-10-15T16:00:00', '2026-10-18T22:00:00', ['0', 'HEI'], ['17999', 'ALT'], [
+w('nogo', 'tfr_detail_6_1234.xml', tfrXml('6/1234', 'VIP', 'Bedminster, NJ VIP movement', '2026-10-15T18:45:00', '2026-10-18T22:00:00', ['0', 'HEI'], ['17999', 'ALT'], [
   { lat: '403900N', lon: '0743800W', clat: '403900N', clon: '0743800W', r: '10', t: 'CIR' },
 ]));
 console.log('fixtures written');

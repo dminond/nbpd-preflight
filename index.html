@@ -62,6 +62,21 @@ th:first-child, td:first-child { text-align: left; }
 th { font-size: .8rem; color: var(--muted); font-weight: 600; }
 td.c1 { background: var(--caution); color: var(--caution-fg); font-weight: 800; }
 details summary { cursor: pointer; font-weight: 700; padding: 6px 0; min-height: 40px; }
+/* Collapsible cards: summary shows the title and the card's GO/CAUTION/NO-GO contribution. */
+section.card { padding: 0; }
+section.card > details > summary { list-style: none; display: flex; align-items: center; gap: 10px; padding: 12px 14px; min-height: 56px; }
+section.card > details > summary::-webkit-details-marker { display: none; }
+section.card > details > summary::before { content: '▸'; font-size: 1.1rem; width: 1em; flex: none; }
+section.card > details[open] > summary::before { content: '▾'; }
+section.card > details > summary h2 { margin: 0; flex: 1; }
+section.card > details > .body { padding: 0 14px 12px; }
+.contrib { flex: none; font-size: .85rem; padding: 4px 10px; }
+.tag.lv-x { background: var(--info); color: var(--info-fg); }
+.st { display: inline-block; font-weight: 900; font-size: .9rem; padding: 3px 8px; border-radius: 6px; margin: 4px 0; }
+.st-active { background: var(--fg); color: var(--bg); }
+.st-soon { background: var(--caution); color: var(--caution-fg); }
+.st-upcoming, .st-unknown { background: var(--info); color: var(--info-fg); border: 1px solid var(--line); }
+.st-ended { background: transparent; color: var(--muted); border: 2px dashed var(--line); }
 .links { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .links a { display: block; padding: 12px; border: 2px solid var(--line); border-radius: 10px; text-align: center; font-weight: 700; text-decoration: none; }
 .cat { font-weight: 900; padding: 1px 6px; border-radius: 4px; color: #fff; }
@@ -82,11 +97,11 @@ footer { font-size: .85rem; color: var(--muted); margin-top: 16px; border-top: 1
     <noscript><div class="stale">JavaScript is required. Check official FAA/NWS sources.</div></noscript>
   </div>
 
-  <section id="s-tfr"><h2>TFRs</h2><div class="body muted">—</div></section>
-  <section id="s-metar"><h2>Current conditions (METAR)</h2><div class="body muted">—</div></section>
-  <section id="s-fcst"><h2>Next 6 hours</h2><div class="body muted">—</div></section>
-  <section id="s-alerts"><h2>NWS alerts</h2><div class="body muted">—</div></section>
-  <section id="s-sky"><h2>Kp &amp; daylight</h2><div class="body muted">—</div></section>
+  <section id="s-tfr" class="card"><details><summary><h2>TFRs</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
+  <section id="s-metar" class="card"><details><summary><h2>Current conditions (METAR)</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
+  <section id="s-fcst" class="card"><details><summary><h2>Next 6 hours</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
+  <section id="s-alerts" class="card"><details><summary><h2>NWS alerts</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
+  <section id="s-sky" class="card"><details><summary><h2>Kp &amp; daylight</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
   <section id="s-links"><h2>Official sources</h2>
     <div class="links">
       <a href="https://tfr.faa.gov/tfr3/?page=map" target="_blank" rel="noopener">FAA TFR map</a>

@@ -55,7 +55,12 @@ How the thresholds are applied:
   - If any source fails, the banner shows at least CAUTION, and that section says to check the official source.
   - If `data.json` is more than 30 minutes old, the page shows DATA STALE and raises the banner to at least CAUTION.
   - A METAR older than 90 minutes (`metarMaxAgeMin`) is flagged CAUTION.
+- **TFR timing doesn't change the level.** Each TFR shows **ACTIVE NOW**, **STARTS IN …** (highlighted when it starts within 3 hours), **ENDED … ago** or **TIMES UNKNOWN**. The status is computed in the browser, so it stays current between refreshes. Upcoming and ended TFRs still raise the banner, because the FAA list is the source of truth and the time parsing can't be checked against every TFR format.
 - **The page adds a note outside sunrise to sunset.** During civil twilight or at night it reminds the pilot that anti-collision lighting is required (14 CFR 107.29). This note does not change the banner.
+
+## Page layout
+
+Each information card (TFRs, METAR, Next 6 hours, NWS alerts, Kp & daylight) starts collapsed. It shows only its title and what it contributes to the banner: GO, CAUTION, NO-GO REVIEW, or UNAVAILABLE when that card's source failed. Tap a card to open it. Cards stay open across the 5-minute refreshes. The official-source links are always shown.
 
 ## Data sources (all keyless)
 

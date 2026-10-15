@@ -106,6 +106,11 @@
    {
     "level": 1,
     "source": "tfr",
+    "text": "TFR 6/3333 5.6 NM NE"
+   },
+   {
+    "level": 1,
+    "source": "tfr",
     "text": "TFR 6/4321 8.3 NM W"
    },
    {
@@ -146,37 +151,37 @@
   ]
  },
  "sources": {
-  "nws_points": {
-   "ok": true,
-   "ms": 1
-  },
   "metar": {
    "ok": true,
-   "ms": 1
+   "ms": 2
+  },
+  "nws_points": {
+   "ok": true,
+   "ms": 2
   },
   "nws_alerts": {
    "ok": true,
-   "ms": 1
+   "ms": 2
   },
   "kp": {
    "ok": true,
-   "ms": 1
-  },
-  "tfr": {
-   "ok": true,
-   "ms": 4
+   "ms": 2
   },
   "taf": {
    "ok": true,
-   "ms": 4
+   "ms": 3
   },
-  "nws_grid": {
+  "tfr": {
    "ok": true,
-   "ms": 0
+   "ms": 5
   },
   "nws_hourly": {
    "ok": true,
-   "ms": 0
+   "ms": 1
+  },
+  "nws_grid": {
+   "ok": true,
+   "ms": 1
   }
  },
  "tfrs": {
@@ -192,7 +197,7 @@
     "altitudes": [
      "SFC – 17,999 FT MSL"
     ],
-    "effective": "2026-10-15T16:00:00.000Z",
+    "effective": "2026-10-15T18:45:00.000Z",
     "expires": "2026-10-18T22:00:00.000Z",
     "title": "Bedminster, NJ VIP movement",
     "distanceNm": 2.9,
@@ -201,6 +206,27 @@
     "compass": "NW",
     "centerDistanceNm": 12.9,
     "level": 2
+   },
+   {
+    "id": "6/3333",
+    "type": "HAZARDS",
+    "facility": "ZNY",
+    "state": "NJ",
+    "description": "Edison, NJ, Thursday, October 15, 2026 UTC",
+    "created": "10/15/2026",
+    "detailUrl": "https://tfr.faa.gov/tfr3/?page=detail_6_3333",
+    "altitudes": [
+     "SFC – 1,500 FT MSL"
+    ],
+    "effective": "2026-10-15T13:00:00.000Z",
+    "expires": "2026-10-15T17:00:00.000Z",
+    "title": "Edison, NJ industrial fire",
+    "distanceNm": 5.6,
+    "bearingDeg": 55,
+    "inside": false,
+    "compass": "NE",
+    "centerDistanceNm": 6.6,
+    "level": 1
    },
    {
     "id": "6/4321",
@@ -278,7 +304,7 @@
     "detailUrl": "https://tfr.faa.gov/tfr3/?page=detail_1_1155"
    }
   ],
-  "checked": 5
+  "checked": 6
  },
  "metars": [
   {

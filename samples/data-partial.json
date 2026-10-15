@@ -75,6 +75,11 @@
    },
    {
     "level": 1,
+    "source": "tfr",
+    "text": "TFR 6/3333: distance unknown — check FAA"
+   },
+   {
+    "level": 1,
     "source": "metar",
     "text": "KEWR: gust 22 kt"
    },
@@ -111,13 +116,13 @@
    "error": "simulated failure (--fail)",
    "ms": 0
   },
-  "tfr": {
-   "ok": true,
-   "ms": 0
-  },
   "metar": {
    "ok": true,
-   "ms": 0
+   "ms": 1
+  },
+  "tfr": {
+   "ok": true,
+   "ms": 1
   },
   "nws_alerts": {
    "ok": true,
@@ -125,7 +130,7 @@
   },
   "taf": {
    "ok": true,
-   "ms": 1
+   "ms": 0
   },
   "nws_hourly": {
    "ok": false,
@@ -189,6 +194,19 @@
     "distanceUnknown": true,
     "note": "distance unknown — check FAA (simulated failure (--fail))",
     "level": 1
+   },
+   {
+    "id": "6/3333",
+    "type": "HAZARDS",
+    "facility": "ZNY",
+    "state": "NJ",
+    "description": "Edison, NJ, Thursday, October 15, 2026 UTC",
+    "created": "10/15/2026",
+    "detailUrl": "https://tfr.faa.gov/tfr3/?page=detail_6_3333",
+    "distanceNm": null,
+    "distanceUnknown": true,
+    "note": "distance unknown — check FAA (simulated failure (--fail))",
+    "level": 1
    }
   ],
   "national": [
@@ -211,7 +229,7 @@
     "detailUrl": "https://tfr.faa.gov/tfr3/?page=detail_1_1155"
    }
   ],
-  "checked": 4
+  "checked": 5
  },
  "metars": [
   {

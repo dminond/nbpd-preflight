@@ -2,7 +2,7 @@
 <XNOTAM-Update version="2.0" origin="USNS">
  <Group><Add><Not>
   <NotUid><txtLocalName>6/1234</txtLocalName><codeFacility>ZNY</codeFacility></NotUid>
-  <dateEffective>2026-10-15T16:00:00</dateEffective>
+  <dateEffective>2026-10-15T18:45:00</dateEffective>
   <dateExpire>2026-10-18T22:00:00</dateExpire>
   <codeTimeZone>EDT</codeTimeZone>
   <txtDescrUSNS>Bedminster, NJ VIP movement</txtDescrUSNS>
