@@ -317,7 +317,11 @@
       append(b, box);
     }
     (a.other || []).forEach(function (o) { append(b, h('div', { class: 'small', text: 'ℹ Inside ' + o.name + ' (' + ({ MOA: 'military operations area', W: 'warning area', A: 'alert area', D: 'danger area' }[o.kind] || o.kind) + ')' + (o.times ? ' · ' + o.times : '') + ' — no sUAS restriction; watch for low-flying aircraft.' })); });
-    (a.stadiums || []).forEach(function (s) { append(b, h('div', { class: 'small', text: '🏟 ' + s.name + ' ' + nm(s.distanceNm, s.compass) + ' — sporting-event TFR (FDC 4/3621) within 3 NM, 1 h before to 1 h after events. Check the schedule.' })); });
+    (a.stadiums || []).forEach(function (s) {
+      append(b, h('div', { class: 'small' }, '🏟 ', h('strong', { text: s.name }), ' ' + nm(s.distanceNm, s.compass) + ' — within its 3 NM stadium restriction (',
+        h('a', { href: 'https://tfr.faa.gov/tfr3/?page=detail_0_0367', target: '_blank', rel: 'noopener', text: 'FDC 0/0367' }),
+        '): no drone flight up to 3,000 ft AGL from 1 h before to 1 h after a qualifying game or race (MLB, NFL, NCAA Division I football, major auto racing). Not shown as a TFR — check the event schedule.'));
+    });
     append(b, h('div', { class: 'small muted', text: 'FAA UAS Data Delivery System' + (a.mapEffective ? ' · facility map effective ' + a.mapEffective : '') +
       (a.groundElevFt != null ? ' · ground ' + a.groundElevFt + ' ft MSL (NWS)' : '') + '. Confirm with B4UFLY or your LAANC provider before flight.' }));
   }
@@ -385,7 +389,7 @@
         mapLayers.restricted.addLayer(tip(shape, x.name));
       });
       m.stadiums.forEach(function (s) {
-        mapLayers.stadiums.addLayer(tip(L.circle([s.lat, s.lon], { radius: 3 * NM, color: '#7a00b5', weight: 1, dashArray: '3 5', fill: false }), s.name + ' · 3 NM event TFR'));
+        mapLayers.stadiums.addLayer(tip(L.circle([s.lat, s.lon], { radius: 3 * NM, color: '#7a00b5', weight: 1, dashArray: '3 5', fill: false }), s.name + ' · 3 NM stadium restriction during events (FDC 0/0367)'));
         mapLayers.stadiums.addLayer(tip(L.circleMarker([s.lat, s.lon], { radius: 5, color: '#7a00b5', fillColor: '#7a00b5', fillOpacity: 1 }), s.name));
       });
     }

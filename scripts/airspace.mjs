@@ -8,7 +8,7 @@ import { rad, bearingDeg, compass, distanceNm, projector, pointInPoly } from './
 
 const FAA = 'https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services';
 const PART_107_MAX_FT = 400;
-const STADIUM_NM = 3; // FDC 4/3621 sporting-event TFR radius
+const STADIUM_NM = 3; // FDC 0/0367 stadium restriction radius (up to 3,000 ft AGL)
 // The Washington DC FRZ and SFRA (14 CFR 93 subpart V) are not in these layers. Both are
 // treated as circles around the DCA VOR/DME (the FRZ is roughly 15 NM, the SFRA 30 NM).
 const DCA = { lat: 38.8592, lon: -77.0364 }, DC_FRZ_NM = 15, DC_SFRA_NM = 30;
@@ -237,7 +237,7 @@ export function evaluateAirspace(raw, cfg, groundFt, now, reasons) {
     out.stadiums.push({ name: p.NAME, city: p.CITY, distanceNm: d, compass: compass(bearingDeg(center, { lat, lon })), status: p.STATUS_CODE || null });
     // The event TFR is active only around games, so by default this is information, like
     // the other standing national restrictions; set thresholds.airspace.stadiumLevel to flag it.
-    if (th.stadiumLevel) flag(th.stadiumLevel, `Stadium ${d} NM ${compass(bearingDeg(center, { lat, lon }))}: ${p.NAME} — sporting-event TFR (FDC 4/3621) during events`);
+    if (th.stadiumLevel) flag(th.stadiumLevel, `Stadium ${d} NM ${compass(bearingDeg(center, { lat, lon }))}: ${p.NAME} — stadium restriction (FDC 0/0367) during qualifying events`);
   }
   out.stadiums.sort((a, b) => a.distanceNm - b.distanceNm);
   return out;
