@@ -1,5 +1,6 @@
 {
   "name": "NBPD UAS Pre-Flight",
+  "siteName": "DFR Pre-Flight",
   "center": { "lat": 40.4862, "lon": -74.4518, "label": "New Brunswick, NJ" },
   "timeZone": "America/New_York",
   "tfrRadiusNm": 8,
@@ -8,6 +9,9 @@
   "tafStations": ["KEWR", "KTTN"],
   "forecastHours": 6,
   "staleMinutes": 30,
+  "stationSearchNm": 60,
+  "stationCount": 3,
+  "tafCount": 2,
   "tfrDetailXmlUrls": [
     "https://tfr.faa.gov/download/detail_{id}.xml",
     "https://tfr.faa.gov/save_pages/detail_{id}.xml"

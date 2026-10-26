@@ -1,16 +1,21 @@
-// NBPD UAS pre-flight page. Reads data.json (written by scripts/fetch.mjs),
-// re-polls every 5 minutes. All external text is inserted as text, never HTML.
+// UAS pre-flight page. /NNNNN reads /api/data?zip=NNNNN (scripts/fetch.mjs behind a Vercel
+// function); / shows a ZIP form. Re-polls every 5 minutes. All external text is inserted
+// as text, never HTML.
 (function () {
   'use strict';
   var POLL_MS = 5 * 60 * 1000, TICK_MS = 30 * 1000;
   var LEVELS = ['GO', 'CAUTION', 'NO-GO REVIEW'];
   var state = { data: null, config: null, loadedAt: 0, lastError: null };
 
-  // ?data=samples/data-stale.json lets you preview the bundled samples.
+  // ?data=samples/data-stale.json (or data.json from a local fetch) previews a file;
+  // otherwise /08901 loads that ZIP and / shows the ZIP form.
   var params = new URLSearchParams(location.search);
-  var dataUrl = 'data.json';
+  var zipMatch = location.pathname.match(/\/(\d{5})\/?$/);
+  var zip = zipMatch ? zipMatch[1] : null;
+  var dataUrl = null;
   var p = params.get('data');
   if (p && /^[\w-]+(\/[\w-]+)*\.json$/.test(p)) dataUrl = p;
+  else if (zip) dataUrl = '/api/data?zip=' + zip;
 
   // ------------------------------------------------------------ helpers
   function h(tag, attrs) {
@@ -30,7 +35,8 @@
     else el.appendChild(typeof c === 'object' ? c : document.createTextNode(String(c)));
   }
   function body(id) { var b = document.querySelector('#' + id + ' .body'); b.textContent = ''; b.className = 'body'; return b; }
-  function tz() { return (state.data && state.data.config && state.data.config.timeZone) || (state.config && state.config.timeZone) || 'America/New_York'; }
+  // No configured zone (NWS lookup failed): fall back to the device's own zone.
+  function tz() { return (state.data && state.data.config && state.data.config.timeZone) || undefined; }
   function fmtTime(d, opts) {
     if (!d) return '—';
     d = d instanceof Date ? d : new Date(d);
@@ -150,13 +156,15 @@
       });
       append(b, det);
     }
-    append(b, h('div', { class: 'small muted', text: 'Checked ' + (d.tfrs.checked || 0) + ' TFR(s) listed for ' + ((state.config && state.config.tfrStates) || ['NJ', 'NY', 'PA']).join('/') + '. Always confirm on the FAA TFR map.' }));
+    var states = (d.config && d.config.tfrStates) || (state.config && state.config.tfrStates) || [];
+    append(b, h('div', { class: 'small muted', text: 'Checked ' + (d.tfrs.checked || 0) + ' TFR(s) listed for ' + states.join('/') + '. Always confirm on the FAA TFR map.' }));
   }
 
   // ------------------------------------------------------------ METAR
   function renderMetar() {
     var d = state.data, b = body('s-metar');
     if (!srcOk('metar') || !d.metars) { append(b, srcErr('metar', 'METAR', 'https://aviationweather.gov/data/metar/')); return; }
+    if (!d.metars.length) append(b, h('div', { class: 'err', text: 'No METAR station within ' + (d.config.stationSearchNm || '?') + ' NM. Check aviationweather.gov.' }));
     d.metars.forEach(function (m) {
       if (m.missing) { append(b, h('div', { class: 'item' }, h('div', { class: 'row' }, h('span', { class: 'big', text: m.station }), tag(1)), h('div', { text: 'No current METAR' }))); return; }
       if (m.decodeError) {
@@ -173,6 +181,7 @@
           m.flightCategory ? h('span', { class: 'cat cat-' + m.flightCategory, text: m.flightCategory }) : null,
           tag(m.level || 0),
           h('span', { class: 'small muted', text: m.obsTime ? fmtTime(m.obsTime) + ' · ' + ago(Date.now() - new Date(m.obsTime)) : 'time unknown' })),
+        m.distanceNm != null ? h('div', { class: 'small muted', text: m.distanceNm + ' NM ' + m.compass + (m.name ? ' · ' + m.name : '') }) : null,
         h('dl', { class: 'kv' },
           h('dt', { text: 'Wind' }), h('dd', { text: wind }),
           h('dt', { text: 'Visibility' }), h('dd', { text: vis }),
@@ -205,8 +214,11 @@
     }
     var tafBox = h('div', { class: 'item' }, h('h2', { text: 'TAF' }));
     if (!srcOk('taf') || !d.tafs) append(tafBox, srcErr('taf', 'TAF', 'https://aviationweather.gov/data/taf/'));
-    else if (!d.tafs.length) append(tafBox, h('div', { class: 'muted', text: 'No TAFs issued for these stations (KSMQ does not issue a TAF).' }));
-    else d.tafs.forEach(function (t) { append(tafBox, h('div', { class: 'mono', text: t.raw })); });
+    else if (!d.tafs.length) append(tafBox, h('div', { class: 'muted', text: d.config.stationSearchNm ? 'No TAF-issuing airport within ' + d.config.stationSearchNm + ' NM.' : 'No TAFs issued for these stations.' }));
+    else d.tafs.forEach(function (t) {
+      if (t.distanceNm != null) append(tafBox, h('div', { class: 'small muted', text: t.station + ' · ' + t.distanceNm + ' NM ' + t.compass }));
+      append(tafBox, h('div', { class: 'mono', text: t.raw }));
+    });
     append(b, tafBox);
   }
 
@@ -288,9 +300,21 @@
     });
   }
 
+  function renderPlace() {
+    var c = state.data && state.data.config, el = document.getElementById('place');
+    if (!c || !c.center || !c.center.label) { el.hidden = true; return; }
+    el.hidden = false; el.textContent = '';
+    append(el, ['📍 ', h('strong', { text: c.center.label }),
+      h('span', { class: 'muted', text: ' · distances from ' + (c.zip ? 'the ZIP centre ' : '') + '(' + c.center.lat.toFixed(4) + ', ' + c.center.lon.toFixed(4) + ') · ' }),
+      h('a', { href: '/', text: 'Change ZIP' })]);
+    if (c.name) document.getElementById('title').textContent = c.name;
+    document.title = (c.name || 'Pre-Flight') + ' — ' + c.center.label;
+  }
+
   function render() {
     renderBanner();
     renderContributions();
+    renderPlace();
     if (!state.data) return;
     if (state.data.nws && state.data.nws.forecastUrl) document.getElementById('nws-link').href = state.data.nws.forecastUrl;
     [renderTfr, renderMetar, renderForecast, renderAlerts, renderSky, renderSources].forEach(function (fn) {
@@ -302,18 +326,38 @@
   function getJSON(url) {
     // No cache-busting query string: it would make every poll a CDN cache miss on Vercel.
     return fetch(url, { cache: 'no-store' }).then(function (r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
+      if (!r.ok) throw Object.assign(new Error('HTTP ' + r.status), { status: r.status });
       return r.json();
     });
   }
   function load() {
+    if (!dataUrl) return;
     return getJSON(dataUrl).then(function (d) {
       if (!d || !d.generated_at) throw new Error('invalid data file');
       state.data = d; state.loadedAt = Date.now(); state.lastError = null;
+      if (zip) try { localStorage.setItem('zip', zip); } catch (e) { /* storage blocked */ }
     }).catch(function (e) {
+      if (e.status === 404 && zip && !p) { dataUrl = null; showZipEntry('ZIP ' + zip + ' was not found. Check the number, or try a nearby ZIP.'); return; }
       state.lastError = e.message || String(e); // keep showing the previous data; it will go stale
-    }).then(render);
+    }).then(function () { if (dataUrl) render(); });
   }
+
+  // ------------------------------------------------------------ ZIP form
+  function showZipEntry(msg) {
+    document.body.classList.add('landing');
+    document.getElementById('zip-entry').hidden = false;
+    var m = document.getElementById('zip-msg');
+    m.hidden = !msg; m.textContent = msg || '';
+    var input = document.getElementById('zip-input');
+    if (!input.value) try { input.value = localStorage.getItem('zip') || ''; } catch (e) { /* storage blocked */ }
+  }
+  document.getElementById('zip-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var v = document.getElementById('zip-input').value.trim();
+    if (/^\d{5}$/.test(v)) location.href = '/' + v;
+    else showZipEntry('Enter a 5-digit ZIP code.');
+  });
+  if (!dataUrl) showZipEntry();
 
   // Theme toggle (remembered per device).
   var root = document.documentElement;
@@ -325,7 +369,8 @@
   });
 
   getJSON('config.json').then(function (c) { state.config = c; }).catch(function () {}).then(function () {
-    if (state.config && state.config.name) document.getElementById('title').textContent = state.config.name;
+    var c = state.config;
+    if (c && !(state.data && state.data.config && state.data.config.name)) document.getElementById('title').textContent = (zip || !dataUrl ? c.siteName : c.name) || c.name;
   });
   load();
   setInterval(load, POLL_MS);
@@ -333,5 +378,5 @@
     renderBanner();
     if (state.data) try { renderTfr(); } catch (e) { console.error(e); }
   }, TICK_MS);
-  document.addEventListener('visibilitychange', function () { if (!document.hidden && Date.now() - state.loadedAt > 60000) load(); });
+  document.addEventListener('visibilitychange', function () { if (dataUrl && !document.hidden && Date.now() - state.loadedAt > 60000) load(); });
 })();

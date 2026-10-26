@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>NBPD UAS Pre-Flight</title>
+<title>DFR Pre-Flight</title>
 <meta name="robots" content="noindex">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#000000">
@@ -87,6 +87,11 @@ section.card > details > .body { padding: 0 14px 12px; }
 .cat { font-weight: 900; padding: 1px 6px; border-radius: 4px; color: #fff; }
 .cat-VFR { background: #0b8a3a; } .cat-MVFR { background: #1f5fd1; } .cat-IFR { background: #d10000; } .cat-LIFR { background: #b000b0; }
 footer { font-size: .85rem; color: var(--muted); margin-top: 16px; border-top: 1px solid var(--line); padding-top: 10px; }
+#place { margin: -2px 0 8px; }
+#zip-entry form { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+#zip-entry input { font: inherit; font-size: 1.4rem; font-weight: 800; letter-spacing: .1em; width: 7em; padding: 6px 10px; border-radius: 8px; border: 2px solid var(--line); background: var(--bg); color: var(--fg); }
+#zip-entry button { font-size: 1rem; }
+body.landing #banner, body.landing #place, body.landing section.card, body.landing #s-sources { display: none; }
 #sample { background: #7a00b5; color: #fff; font-weight: 900; text-align: center; padding: 4px; border-radius: 6px; margin-top: 8px; }
 @media (max-width: 420px) { body { font-size: 18px; } #banner .lvl { font-size: 2rem; } .links { grid-template-columns: 1fr; } }
 </style>
@@ -94,7 +99,18 @@ footer { font-size: .85rem; color: var(--muted); margin-top: 16px; border-top: 1
 <body>
 <main>
   <div id="sample" hidden>SAMPLE DATA — NOT LIVE</div>
-  <h1><span class="brand"><img src="assets/patch-96.png" width="32" height="40" alt="New Brunswick Police patch"><span id="title">NBPD UAS Pre-Flight</span></span><button id="theme" type="button" aria-label="Toggle light/dark">Light/Dark</button></h1>
+  <h1><span class="brand"><span id="title">DFR Pre-Flight</span></span><button id="theme" type="button" aria-label="Toggle light/dark">Light/Dark</button></h1>
+  <div id="place" class="small" hidden></div>
+
+  <section id="zip-entry" hidden>
+    <h2>Pre-flight check by ZIP code</h2>
+    <div id="zip-msg" class="err" hidden></div>
+    <div class="small muted">TFRs, METAR/TAF, NWS forecast and alerts, Kp and daylight for a US ZIP code. Bookmark the page it opens, e.g. <span class="mono">/08901</span>.</div>
+    <form id="zip-form" autocomplete="off">
+      <input id="zip-input" name="zip" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" placeholder="ZIP" aria-label="5-digit ZIP code" required>
+      <button type="submit">Check</button>
+    </form>
+  </section>
 
   <div id="banner" class="lv-x" role="status" aria-live="polite">
     <div class="lvl">LOADING…</div>
@@ -112,13 +128,14 @@ footer { font-size: .85rem; color: var(--muted); margin-top: 16px; border-top: 1
       <a href="https://tfr.faa.gov/tfr3/?page=map" target="_blank" rel="noopener">FAA TFR map</a>
       <a href="https://www.faa.gov/uas/getting_started/b4ufly" target="_blank" rel="noopener">B4UFLY</a>
       <a href="https://aviationweather.gov/" target="_blank" rel="noopener">aviationweather.gov</a>
-      <a id="nws-link" href="https://forecast.weather.gov/MapClick.php?lat=40.4862&amp;lon=-74.4518" target="_blank" rel="noopener">NWS forecast</a>
+      <a id="nws-link" href="https://forecast.weather.gov/" target="_blank" rel="noopener">NWS forecast</a>
     </div>
   </section>
   <section id="s-sources"><details><summary>Data source status</summary><div class="body small"></div></details></section>
 
   <footer>
     Situational awareness aid only. The remote pilot in command remains responsible for the preflight assessment under 14 CFR 107.49 and for checking official FAA sources.
+    <br>ZIP locations from <a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a> (CC BY 4.0).
   </footer>
 </main>
 <script src="suncalc.js"></script>

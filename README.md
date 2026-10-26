@@ -17,22 +17,34 @@ The workflow never commits to the repository. Each run builds a new Pages deploy
 
 Note: GitHub sometimes delays scheduled workflows by several minutes or more when it is under load. When that happens, the page shows **DATA STALE** once `data.json` is more than 30 minutes old.
 
-## Vercel deployment (this branch)
+## Vercel deployment (this branch): any US ZIP code
 
-This branch can also run on Vercel, side by side with the GitHub Pages site on `main`. The page is the same. The only difference is where `data.json` comes from:
+This branch runs on Vercel (dfrpreflight.com), side by side with the GitHub Pages site on `main`.
 
-- `vercel.json` rewrites `/data.json` to the function `api/data.mjs`, which runs `scripts/fetch.mjs` on demand (no cron, no file written).
-- Vercel's CDN caches the result for 5 minutes and serves a stale copy for up to 10 more while it refreshes, so data is at most about 15 minutes old, under the 30-minute DATA STALE limit. Upstream APIs are hit about once per 5 minutes per Vercel region, however many pilots have the page open.
-- Static files (page, `config.json`, `assets/`, `samples/`) are served as-is, so `?data=samples/…` works on Vercel too.
+- `/` shows a ZIP form. `/08901` shows the pre-flight page for that ZIP; `/08901/` redirects there.
+- The page loads `/api/data?zip=08901`. The function `api/data.mjs` looks the ZIP up in `data/zips.json`, builds that location's config (`scripts/location.mjs`) and runs `scripts/fetch.mjs` on demand. An unknown ZIP returns 404 and the page shows the form again.
+- Vercel's CDN caches each ZIP's result for 5 minutes and serves a stale copy for up to 10 more while it refreshes, so data is at most about 15 minutes old, under the 30-minute DATA STALE limit. The TFR list, TFR details and Kp are the same for every ZIP, so a warm function instance shares them across ZIPs for 5 minutes.
+- `?data=samples/…` still previews the sample files, and `/data.json` still serves the fixed `config.json` location.
 
-Setup:
+What changes per ZIP:
 
-1. In Vercel, *Add New → Project*, import this repository. Framework preset **Other**; no build command, no output directory override.
-2. *Settings → Environment Variables*: add `NWS_CONTACT` (same value as the GitHub variable).
-3. *Settings → Git → Production Branch*: set it to this branch so `main` keeps being served only by GitHub Pages. (Every push to any branch also gets its own preview URL.)
-4. Open the deployment and check **Data source status**.
+| | Fixed config (`config.json`) | ZIP page |
+| --- | --- | --- |
+| Centre | `center` | ZIP centre point from GeoNames (not the flight location; large rural ZIPs can be several NM across) |
+| TFR states | `tfrStates` | the ZIP's state plus bordering states |
+| METAR / TAF | `stations`, `tafStations` | nearest `stationCount` (3) METAR and `tafCount` (2) TAF stations within `stationSearchNm` (60 NM), from an aviationweather.gov bounding-box query; no station in range is a CAUTION |
+| Time zone | `timeZone` | from the NWS point lookup, else the device's zone |
 
-The GitHub Action is untouched and still deploys Pages only from `main`.
+Thresholds, TFR radius and everything else come from `config.json` for every ZIP.
+
+`data/zips.json` (about 41,000 ZIPs; territories and military APO/FPO codes are not included) is built from the GeoNames US postal-code file (CC BY 4.0; credited in the page footer). To refresh it:
+
+```sh
+curl -O https://download.geonames.org/export/zip/US.zip && unzip US.zip US.txt
+node scripts/build-zips.mjs US.txt
+```
+
+Setup: import the repository in Vercel (framework preset **Other**, no build command), add the `NWS_CONTACT` environment variable, and set the production branch to this branch.
 
 ## Editing `config.json`
 
@@ -101,7 +113,7 @@ You need Node 20 or later. There are no dependencies.
 
 ```sh
 node scripts/fetch.mjs              # live fetch -> data.json (set NWS_CONTACT first)
-python3 -m http.server 8000         # then open http://localhost:8000/
+python3 -m http.server 8000         # then open http://localhost:8000/?data=data.json
 ```
 
 You can preview the bundled samples without network access:
@@ -137,7 +149,8 @@ index.html  app.js  suncalc.js   page (vanilla JS/CSS, no build, no CDN)
 config.json                      hand-edited settings
 scripts/fetch.mjs                fetch + filter + thresholds -> data.json
 .github/workflows/refresh.yml    cron every 10 min + manual run -> GitHub Pages
-api/data.mjs  vercel.json         Vercel: on-demand data.json behind the CDN cache
+api/data.mjs  vercel.json         Vercel: /NNNNN routing, on-demand data per ZIP behind the CDN cache
+scripts/location.mjs  data/zips.json  ZIP -> location config; scripts/build-zips.mjs rebuilds the data
 assets/  favicon.ico              NBPD patch: favicon, home-screen icon, header mark
 samples/  test/                  sample data.json files, fixtures, tests
 ```

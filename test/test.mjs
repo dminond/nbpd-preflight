@@ -33,7 +33,7 @@ const now = new Date('2026-10-15T17:50:00Z');
 const full = await run({ config: 'config.json', out, fixtures: ['test/fixtures/base'], now, fail: [] });
 checkShape(full);
 assert.equal(full.overall.level, 'CAUTION');
-assert.equal(full.tfrs.local.length, 4, 'Buffalo TFR filtered out by radius');
+assert.equal(full.tfrs.local.length, 3, 'Buffalo TFR and one beyond the 8 NM radius filtered out');
 assert.equal(full.tfrs.national.length, 2);
 assert.equal(full.hourly.length, 6);
 
@@ -72,3 +72,47 @@ assert.equal(kewr.visibilitySm, null);
 assert.equal(kewr.ceilingFt, null);
 assert.equal(bad.metars.filter(m => m.raw).length, 3, 'all stations still shown');
 console.log('metar robustness tests passed');
+
+// ZIP pages: location lookup, neighbouring-state TFR filter, nearest-station selection.
+const { lookupZip, configForZip } = await import('../scripts/location.mjs');
+const { mkdirSync, writeFileSync } = await import('node:fs');
+assert.equal(lookupZip('00000'), null);
+assert.equal(lookupZip('abcde'), null);
+const nb = lookupZip('08901');
+assert.equal(nb.state, 'NJ');
+assert.ok(distanceNm(C, nb) < 1, 'ZIP centre near the old hard-coded centre');
+const zcfg = configForZip(JSON.parse(readFileSync('config.json', 'utf8')), nb);
+assert.deepEqual(zcfg.tfrStates, ['NJ', 'DE', 'NY', 'PA']);
+assert.equal(zcfg.name, 'DFR Pre-Flight');
+
+// Bounding-box responses: several reports per station, unsorted, one without coordinates.
+const auto = new URL('../test/.auto/', import.meta.url).pathname;
+mkdirSync(auto, { recursive: true });
+const ob = (icaoId, lat, lon, mAgo, name) => ({ icaoId, lat, lon, name, obsTime: Math.floor(now / 1000) - mAgo * 60, wdir: 270, wspd: 5, visib: '10+', clouds: [], rawOb: `METAR ${icaoId} ${mAgo}` });
+writeFileSync(auto + 'metar.json', JSON.stringify([
+  ob('KTTN', 40.2767, -74.8135, 5, 'Trenton'), ob('KEWR', 40.6925, -74.1687, 50, 'Newark'), ob('KEWR', 40.6925, -74.1687, 2, 'Newark'),
+  ob('KSMQ', 40.6238, -74.6694, 3, 'Somerville'), ob('KJFK', 40.6398, -73.7789, 1, 'JFK'), ob('KXXX', null, null, 1, 'no coords'),
+]));
+writeFileSync(auto + 'taf.json', JSON.stringify([
+  { icaoId: 'KJFK', lat: 40.6398, lon: -73.7789, rawTAF: 'TAF KJFK', issueTime: '2026-10-15T17:20:00Z' },
+  { icaoId: 'KEWR', lat: 40.6925, lon: -74.1687, rawTAF: 'TAF KEWR old', issueTime: '2026-10-15T11:20:00Z' },
+  { icaoId: 'KEWR', lat: 40.6925, lon: -74.1687, rawTAF: 'TAF KEWR AMD', issueTime: '2026-10-15T17:20:00Z' },
+  { icaoId: 'KTTN', lat: 40.2767, lon: -74.8135, rawTAF: 'TAF KTTN', issueTime: '2026-10-15T17:20:00Z' },
+]));
+const pts = JSON.parse(readFileSync('test/fixtures/base/nws_points.json', 'utf8'));
+pts.properties.timeZone = 'America/New_York';
+writeFileSync(auto + 'nws_points.json', JSON.stringify(pts));
+const z = await run({ cfg: zcfg, out: null, fixtures: [auto, 'test/fixtures/base'], now, fail: [] });
+checkShape(z);
+assert.deepEqual(z.config.stations, ['KSMQ', 'KEWR', 'KTTN'], 'nearest three, closest first');
+assert.deepEqual(z.metars.map(m => m.station), ['KSMQ', 'KEWR', 'KTTN']);
+assert.equal(z.metars[1].raw, 'METAR KEWR 2', 'latest report per station');
+assert.ok(z.metars.every(m => m.distanceNm > 0 && m.compass));
+assert.deepEqual(z.tafs.map(t => t.raw), ['TAF KEWR AMD', 'TAF KTTN'], 'nearest two TAFs, latest issue');
+assert.equal(z.config.timeZone, 'America/New_York', 'time zone from NWS points');
+assert.equal(z.config.center.label, 'New Brunswick, NJ 08901');
+writeFileSync(auto + 'metar.json', '[]');
+const none = await run({ cfg: zcfg, out: null, fixtures: [auto, 'test/fixtures/base'], now, fail: [] });
+assert.deepEqual(none.metars, []);
+assert.ok(none.overall.reasons.some(r => /No METAR station within 60 NM/.test(r.text)), 'no nearby station is a caution');
+console.log('zip tests passed');
