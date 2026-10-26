@@ -300,7 +300,8 @@
 
   // ------------------------------------------------------------ loading
   function getJSON(url) {
-    return fetch(url + (url.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now(), { cache: 'no-store' }).then(function (r) {
+    // No cache-busting query string: it would make every poll a CDN cache miss on Vercel.
+    return fetch(url, { cache: 'no-store' }).then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     });

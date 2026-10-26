@@ -602,9 +602,11 @@ export async function run(args) {
     kp,
     nws: points ? { office: p.gridId || p.cwa || null, forecastUrl: `https://forecast.weather.gov/MapClick.php?lat=${lat}&lon=${lon}` } : null,
   };
-  const tmp = args.out + '.tmp';
-  await writeFile(tmp, JSON.stringify(data, null, 1) + '\n');
-  await rename(tmp, args.out);
+  if (args.out) { // the Vercel function passes no out and serves the result directly
+    const tmp = args.out + '.tmp';
+    await writeFile(tmp, JSON.stringify(data, null, 1) + '\n');
+    await rename(tmp, args.out);
+  }
   return data;
 }
 

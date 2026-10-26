@@ -17,6 +17,23 @@ The workflow never commits to the repository. Each run builds a new Pages deploy
 
 Note: GitHub sometimes delays scheduled workflows by several minutes or more when it is under load. When that happens, the page shows **DATA STALE** once `data.json` is more than 30 minutes old.
 
+## Vercel deployment (this branch)
+
+This branch can also run on Vercel, side by side with the GitHub Pages site on `main`. The page is the same. The only difference is where `data.json` comes from:
+
+- `vercel.json` rewrites `/data.json` to the function `api/data.mjs`, which runs `scripts/fetch.mjs` on demand (no cron, no file written).
+- Vercel's CDN caches the result for 5 minutes and serves a stale copy for up to 10 more while it refreshes, so data is at most about 15 minutes old, under the 30-minute DATA STALE limit. Upstream APIs are hit about once per 5 minutes per Vercel region, however many pilots have the page open.
+- Static files (page, `config.json`, `assets/`, `samples/`) are served as-is, so `?data=samples/…` works on Vercel too.
+
+Setup:
+
+1. In Vercel, *Add New → Project*, import this repository. Framework preset **Other**; no build command, no output directory override.
+2. *Settings → Environment Variables*: add `NWS_CONTACT` (same value as the GitHub variable).
+3. *Settings → Git → Production Branch*: set it to this branch so `main` keeps being served only by GitHub Pages. (Every push to any branch also gets its own preview URL.)
+4. Open the deployment and check **Data source status**.
+
+The GitHub Action is untouched and still deploys Pages only from `main`.
+
 ## Editing `config.json`
 
 | Key | Meaning |
@@ -120,6 +137,7 @@ index.html  app.js  suncalc.js   page (vanilla JS/CSS, no build, no CDN)
 config.json                      hand-edited settings
 scripts/fetch.mjs                fetch + filter + thresholds -> data.json
 .github/workflows/refresh.yml    cron every 10 min + manual run -> GitHub Pages
+api/data.mjs  vercel.json         Vercel: on-demand data.json behind the CDN cache
 assets/  favicon.ico              NBPD patch: favicon, home-screen icon, header mark
 samples/  test/                  sample data.json files, fixtures, tests
 ```

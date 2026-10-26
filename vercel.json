@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    { "source": "/data.json", "destination": "/api/data" }
+  ],
+  "functions": {
+    "api/data.mjs": {
+      "maxDuration": 120,
+      "includeFiles": "config.json"
+    }
+  },
+  "headers": [
+    { "source": "/config.json", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
+  ]
+}
