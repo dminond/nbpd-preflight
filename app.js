@@ -1,5 +1,5 @@
-// UAS pre-flight page. /NNNNN reads /api/data?zip=NNNNN (scripts/fetch.mjs behind a Vercel
-// function); / shows a ZIP form. Re-polls every 5 minutes. All external text is inserted
+// UAS pre-flight page. /NNNNN reads /api/data?zip=NNNNN and /?lat=..&lon=.. reads
+// /api/data?lat=..&lon=.. (scripts/fetch.mjs behind a Vercel function); / shows a ZIP form. Re-polls every 5 minutes. All external text is inserted
 // as text, never HTML.
 (function () {
   'use strict';
@@ -8,14 +8,17 @@
   var state = { data: null, config: null, loadedAt: 0, lastError: null, loading: false, loadStart: 0 };
 
   // ?data=samples/data-stale.json (or data.json from a local fetch) previews a file;
-  // otherwise /08901 loads that ZIP and / shows the ZIP form.
+  // otherwise /08901 loads that ZIP, /?lat=..&lon=.. a device location, and / shows the ZIP form.
   var params = new URLSearchParams(location.search);
   var zipMatch = location.pathname.match(/\/(\d{5})\/?$/);
   var zip = zipMatch ? zipMatch[1] : null;
+  var COORD = /^-?\d{1,3}(\.\d+)?$/;
+  var point = COORD.test(params.get('lat') || '') && COORD.test(params.get('lon') || '') ? { lat: params.get('lat'), lon: params.get('lon') } : null;
   var dataUrl = null;
   var p = params.get('data');
   if (p && /^[\w-]+(\/[\w-]+)*\.json$/.test(p)) dataUrl = p;
   else if (zip) dataUrl = '/api/data?zip=' + zip;
+  else if (point) dataUrl = '/api/data?lat=' + point.lat + '&lon=' + point.lon;
 
   // ------------------------------------------------------------ helpers
   function h(tag, attrs) {
@@ -315,9 +318,13 @@
     var c = state.data && state.data.config, el = document.getElementById('place');
     if (!c || !c.center || !c.center.label) { el.hidden = true; return; }
     el.hidden = false; el.textContent = '';
-    append(el, ['📍 ', h('strong', { text: c.center.label }),
-      h('span', { class: 'muted', text: ' · distances from ' + (c.zip ? 'the ZIP centre ' : '') + '(' + c.center.lat.toFixed(4) + ', ' + c.center.lon.toFixed(4) + ') · ' }),
-      h('a', { href: '/', text: 'Change ZIP' })]);
+    var device = c.center.source === 'device';
+    var geo = navigator.geolocation ? h('button', { type: 'button', text: device ? 'Update my location' : 'Use my location' }) : null;
+    if (geo) geo.addEventListener('click', function () { locate(geo); });
+    append(el, ['📍 ', h('strong', { text: device ? 'Your location' : c.center.label }),
+      h('span', { class: 'muted', text: (device ? ' · ' + c.center.label : '') + ' · distances from ' + (device ? 'this point ' : c.zip ? 'the ZIP centre ' : '') +
+        '(' + c.center.lat.toFixed(device ? 3 : 4) + ', ' + c.center.lon.toFixed(device ? 3 : 4) + ') · ' }),
+      h('a', { href: '/', text: device ? 'Enter a ZIP' : 'Change ZIP' }), geo ? ' · ' : null, geo]);
     if (c.name) document.getElementById('title').textContent = c.name;
     document.title = (c.name || 'Pre-Flight') + ' — ' + c.center.label;
   }
@@ -351,7 +358,11 @@
       state.data = d; state.loadedAt = Date.now(); state.lastError = null;
       if (zip) try { localStorage.setItem('zip', zip); } catch (e) { /* storage blocked */ }
     }).catch(function (e) {
-      if (e.status === 404 && zip && !p) { dataUrl = null; showZipEntry('ZIP ' + zip + ' was not found. Check the number, or try a nearby ZIP.'); return; }
+      if (e.status === 404 && (zip || point) && !p) {
+        dataUrl = null;
+        showZipEntry(zip ? 'ZIP ' + zip + ' was not found. Check the number, or try a nearby ZIP.' : 'That location is outside US coverage. Enter a ZIP instead.');
+        return;
+      }
       state.lastError = e.message || String(e); // keep showing the previous data; it will go stale
     }).then(function () {
       state.loading = false; clearInterval(tick);
@@ -368,6 +379,23 @@
     var input = document.getElementById('zip-input');
     if (!input.value) try { input.value = localStorage.getItem('zip') || ''; } catch (e) { /* storage blocked */ }
   }
+  // Device location -> /?lat=..&lon=.. (3 decimals, ~100 m). Needs HTTPS and the user's permission.
+  function locate(btn) {
+    var label = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Locating…';
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      location.href = '/?lat=' + pos.coords.latitude.toFixed(3) + '&lon=' + pos.coords.longitude.toFixed(3);
+    }, function (err) {
+      btn.disabled = false; btn.textContent = label;
+      var msg = err.code === 1 ? 'Location permission was denied. Allow it in your browser settings, or enter a ZIP.'
+        : err.code === 3 ? 'Finding your location timed out. Try again, or enter a ZIP.' : 'Your location is unavailable. Enter a ZIP instead.';
+      if (document.body.classList.contains('landing')) showZipEntry(msg);
+      else alert(msg);
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+  }
+  var geoBtn = document.getElementById('geo-btn');
+  if (navigator.geolocation) { geoBtn.hidden = false; geoBtn.addEventListener('click', function () { locate(geoBtn); }); }
+
   document.getElementById('zip-form').addEventListener('submit', function (e) {
     e.preventDefault();
     var v = document.getElementById('zip-input').value.trim();
@@ -387,7 +415,7 @@
 
   getJSON('config.json').then(function (c) { state.config = c; }).catch(function () {}).then(function () {
     var c = state.config;
-    if (c && !(state.data && state.data.config && state.data.config.name)) document.getElementById('title').textContent = (zip || !dataUrl ? c.siteName : c.name) || c.name;
+    if (c && !(state.data && state.data.config && state.data.config.name)) document.getElementById('title').textContent = (zip || point || !dataUrl ? c.siteName : c.name) || c.name;
   });
   load();
   setInterval(load, POLL_MS);

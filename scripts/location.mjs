@@ -1,5 +1,5 @@
-// ZIP code -> per-location config for fetch.mjs. ZIP centres come from data/zips.json
-// (GeoNames, CC BY 4.0; rebuild with scripts/build-zips.mjs).
+// ZIP code or device location -> per-location config for fetch.mjs. ZIP centres come
+// from data/zips.json (GeoNames, CC BY 4.0; rebuild with scripts/build-zips.mjs).
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -26,23 +26,51 @@ export const NEIGHBORS = {
 };
 
 let zips = null;
+const loadZips = root => (zips ||= JSON.parse(readFileSync(path.join(root, 'data', 'zips.json'), 'utf8')));
 export function lookupZip(zip, root = process.cwd()) {
   if (!/^\d{5}$/.test(String(zip))) return null;
-  zips ||= JSON.parse(readFileSync(path.join(root, 'data', 'zips.json'), 'utf8'));
-  const z = zips[zip];
+  const z = loadZips(root)[zip];
   return z ? { zip, lat: z[0], lon: z[1], state: z[2], city: z[3] } : null;
+}
+
+// "40.489", "-74.448" -> { lat, lon } rounded to 3 decimals (~100 m), or null.
+export function parsePoint(lat, lon) {
+  const ok = s => typeof s === 'string' && /^-?\d{1,3}(\.\d+)?$/.test(s);
+  if (!ok(lat) || !ok(lon)) return null;
+  const p = { lat: Math.round(Number(lat) * 1e3) / 1e3, lon: Math.round(Number(lon) * 1e3) / 1e3 };
+  return Math.abs(p.lat) <= 90 && Math.abs(p.lon) <= 180 ? p : null;
+}
+
+// Nearest ZIP centre to a point (linear scan, a few ms), with its distance in NM.
+export function nearestZip(lat, lon, root = process.cwd()) {
+  const k = Math.cos(lat * Math.PI / 180);
+  let best = null, bestD = Infinity;
+  for (const [zip, z] of Object.entries(loadZips(root))) {
+    const dy = z[0] - lat, dx = (z[1] - lon) * k, d = dx * dx + dy * dy;
+    if (d < bestD) { bestD = d; best = { zip, lat: z[0], lon: z[1], state: z[2], city: z[3] }; }
+  }
+  return best && { ...best, distanceNm: Math.round(Math.sqrt(bestD) * 60 * 10) / 10 };
 }
 
 // The shared settings (thresholds, radius, URLs) stay as in config.json; only what
 // depends on where you are changes. stations: null makes fetch.mjs pick the nearest ones.
 export function configForZip(base, loc) {
+  return locationConfig(base, loc.state, { zip: loc.zip, center: { lat: loc.lat, lon: loc.lon, label: `${loc.city}, ${loc.state} ${loc.zip}`, source: 'zip' } });
+}
+
+// A device location: distances are measured from the point itself; the nearest ZIP
+// only supplies the state (for the TFR filter) and a place name.
+export function configForPoint(base, pt, near) {
+  return locationConfig(base, near.state, { zip: null, nearZip: near.zip, center: { lat: pt.lat, lon: pt.lon, label: `Near ${near.city}, ${near.state}`, source: 'device' } });
+}
+
+function locationConfig(base, state, loc) {
   return {
     ...base,
+    ...loc,
     name: base.siteName || base.name,
-    zip: loc.zip,
-    center: { lat: loc.lat, lon: loc.lon, label: `${loc.city}, ${loc.state} ${loc.zip}` },
     timeZone: null, // taken from the NWS point lookup
-    tfrStates: [loc.state, ...(NEIGHBORS[loc.state] || [])],
+    tfrStates: [state, ...(NEIGHBORS[state] || [])],
     stations: null,
     tafStations: null,
   };

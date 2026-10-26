@@ -22,7 +22,8 @@ Note: GitHub sometimes delays scheduled workflows by several minutes or more whe
 This branch runs on Vercel (dfrpreflight.com), side by side with the GitHub Pages site on `main`.
 
 - `/` shows a ZIP form. `/08901` shows the pre-flight page for that ZIP; `/08901/` redirects there.
-- The page loads `/api/data?zip=08901`. The function `api/data.mjs` looks the ZIP up in `data/zips.json`, builds that location's config (`scripts/location.mjs`) and runs `scripts/fetch.mjs` on demand. An unknown ZIP returns 404 and the page shows the form again.
+- **Use my location** (on the form and on every location page) asks the browser for the device's position and opens `/?lat=40.512&lon=-74.406` (3 decimals, about 100 m). Distances are then measured from that point, not a ZIP centre. The nearest ZIP supplies the state for the TFR filter and the "Near Edison, NJ" label; a point more than 50 NM from every US ZIP centre is refused as outside coverage.
+- The page loads `/api/data?zip=08901` (or `/api/data?lat=…&lon=…`). The function `api/data.mjs` looks the ZIP up in `data/zips.json`, builds that location's config (`scripts/location.mjs`) and runs `scripts/fetch.mjs` on demand. An unknown ZIP returns 404 and the page shows the form again.
 - Vercel's CDN caches each ZIP's result for 5 minutes and serves a stale copy for up to 10 more while it refreshes, so data is at most about 15 minutes old, under the 30-minute DATA STALE limit. The TFR list, TFR details and Kp are the same for every ZIP, so a warm function instance shares them across ZIPs for 5 minutes.
 - `?data=samples/…` still previews the sample files, and `/data.json` still serves the fixed `config.json` location.
 
@@ -30,8 +31,8 @@ What changes per ZIP:
 
 | | Fixed config (`config.json`) | ZIP page |
 | --- | --- | --- |
-| Centre | `center` | ZIP centre point from GeoNames (not the flight location; large rural ZIPs can be several NM across) |
-| TFR states | `tfrStates` | the ZIP's state plus bordering states |
+| Centre | `center` | ZIP centre point from GeoNames (not the flight location; large rural ZIPs can be several NM across), or the device location |
+| TFR states | `tfrStates` | the (nearest) ZIP's state plus bordering states |
 | METAR / TAF | `stations`, `tafStations` | nearest `stationCount` (3) METAR and `tafCount` (2) TAF stations within `stationSearchNm` (60 NM), from an aviationweather.gov bounding-box query; no station in range is a CAUTION |
 | Time zone | `timeZone` | from the NWS point lookup, else the device's zone |
 

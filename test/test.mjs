@@ -115,4 +115,17 @@ writeFileSync(auto + 'metar.json', '[]');
 const none = await run({ cfg: zcfg, out: null, fixtures: [auto, 'test/fixtures/base'], now, fail: [] });
 assert.deepEqual(none.metars, []);
 assert.ok(none.overall.reasons.some(r => /No METAR station within 60 NM/.test(r.text)), 'no nearby station is a caution');
+
+// Device location: rounded point, nearest ZIP for state/label, distances from the point itself.
+const { parsePoint, nearestZip, configForPoint } = await import('../scripts/location.mjs');
+assert.deepEqual(parsePoint('40.48912', '-74.44821'), { lat: 40.489, lon: -74.448 });
+for (const [a, b] of [['91', '0'], ['1e2', '0'], ['40.4', null], ['', '-74'], ['40.4,1', '-74']]) assert.equal(parsePoint(a, b), null, `${a},${b}`);
+const nz = nearestZip(40.5, -74.45);
+assert.equal(nz.state, 'NJ');
+assert.ok(nz.distanceNm < 3);
+assert.ok(nearestZip(30, -40).distanceNm > 1000, 'mid-Atlantic is far from every ZIP');
+const pcfg = configForPoint(JSON.parse(readFileSync('config.json', 'utf8')), { lat: 40.5, lon: -74.45 }, nz);
+assert.deepEqual(pcfg.center, { lat: 40.5, lon: -74.45, label: `Near ${nz.city}, NJ`, source: 'device' });
+assert.equal(pcfg.zip, null);
+assert.deepEqual(pcfg.tfrStates, ['NJ', 'DE', 'NY', 'PA']);
 console.log('zip tests passed');

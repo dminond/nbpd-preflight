@@ -655,7 +655,7 @@ export async function run(args) {
     schema: 1,
     generated_at: now.toISOString(),
     ...(args.sampleAge != null ? { sample: { age_minutes: args.sampleAge } } : {}),
-    config: { name: cfg.name, zip: cfg.zip || null, center: cfg.center, timeZone: cfg.timeZone || p.timeZone || null, tfrRadiusNm: cfg.tfrRadiusNm,
+    config: { name: cfg.name, zip: cfg.zip || null, nearZip: cfg.nearZip || null, center: cfg.center, timeZone: cfg.timeZone || p.timeZone || null, tfrRadiusNm: cfg.tfrRadiusNm,
       tfrStates: cfg.tfrStates, stations, stationSearchNm: autoStations ? searchNm : null, staleMinutes: cfg.staleMinutes, thresholds: th },
     overall: { level: LEVELS[lvl], levelNum: lvl, reasons },
     sources,

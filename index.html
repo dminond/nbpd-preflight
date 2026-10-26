@@ -97,6 +97,8 @@ footer { font-size: .85rem; color: var(--muted); margin-top: 16px; border-top: 1
 #zip-entry form { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 #zip-entry input { font: inherit; font-size: 1.4rem; font-weight: 800; letter-spacing: .1em; width: 7em; padding: 6px 10px; border-radius: 8px; border: 2px solid var(--line); background: var(--bg); color: var(--fg); }
 #zip-entry button { font-size: 1rem; }
+#geo-btn { margin-top: 10px; width: 100%; font-weight: 700; }
+#place button { font-size: inherit; min-height: 0; padding: 0; border: 0; background: none; color: var(--link); text-decoration: underline; cursor: pointer; }
 body.landing #banner, body.landing #place, body.landing section.card, body.landing #s-sources { display: none; }
 #sample { background: #7a00b5; color: #fff; font-weight: 900; text-align: center; padding: 4px; border-radius: 6px; margin-top: 8px; }
 @media (max-width: 420px) { body { font-size: 18px; } #banner .lvl { font-size: 2rem; } .links { grid-template-columns: 1fr; } }
@@ -116,6 +118,7 @@ body.landing #banner, body.landing #place, body.landing section.card, body.landi
       <input id="zip-input" name="zip" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" placeholder="ZIP" aria-label="5-digit ZIP code" required>
       <button type="submit">Check</button>
     </form>
+    <button id="geo-btn" type="button" hidden>📍 Use my location</button>
   </section>
 
   <div id="banner" class="lv-x loading" role="status" aria-live="polite">
