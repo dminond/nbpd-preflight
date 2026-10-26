@@ -158,7 +158,7 @@
         h('dl', { class: 'kv' },
           h('dt', { text: 'Altitudes' }), h('dd', { text: (t.altitudes && t.altitudes.length) ? t.altitudes.join('; ') : 'see FAA detail' }),
           h('dt', { text: 'Window' }), h('dd', { text: win })),
-        h('div', { class: 'small', text: t.title && t.title !== t.description ? t.title + ' — ' + (t.description || '') : (t.description || '') }),
+        h('div', { class: 'small clamp', title: 'Show all', text: t.title && t.title !== t.description ? t.title + ' — ' + (t.description || '') : (t.description || '') }),
         t.note ? h('div', { class: 'small muted', text: t.note }) : null));
     });
     var nat = d.tfrs.national || [];
@@ -404,16 +404,34 @@
     var radius = d.config.tfrRadiusNm;
     if (radius) mapLayers.center.addLayer(tip(L.circle(here, { radius: radius * NM, color: '#555', weight: 1.5, dashArray: '8 6', fill: false, interactive: true }), 'TFR search radius ' + radius + ' NM'));
     mapLayers.center.addLayer(tip(L.circleMarker(here, { radius: 8, color: '#fff', weight: 3, fillColor: '#0057ff', fillOpacity: 1 }), c.label || 'Location'));
-    if (fit) map.fitBounds(L.latLng(here).toBounds(((a && a.radiusNm) || 3) * 2 * NM));
+    if (fit) {
+      // The airspace radius, widened to the nearest edge of each local TFR.
+      var bounds = L.latLng(here).toBounds(((a && a.radiusNm) || 3) * 2 * NM);
+      ((d.tfrs && d.tfrs.local) || []).forEach(function (t) {
+        if (t.distanceNm == null || t.bearingDeg == null) return;
+        var r = (t.distanceNm + 0.5) / 60, b = t.bearingDeg * Math.PI / 180;
+        bounds.extend([c.lat + r * Math.cos(b), c.lon + r * Math.sin(b) / Math.cos(c.lat * Math.PI / 180)]);
+      });
+      map.fitBounds(bounds);
+    }
   }
   function openMap() {
     loadLeaflet().then(function () { if (!map) initMap(); else { map.invalidateSize(); drawMap(false); } })
       .catch(function (e) { document.getElementById('map').textContent = 'Map unavailable: ' + e.message; });
   }
   var mapDetails = document.querySelector('#s-map details');
+  // Desktop dashboard (see the CSS): every card open and the map always shown. The phone's
+  // remembered map open/closed choice is left alone.
+  var desktop = window.matchMedia ? window.matchMedia('(min-width: 1000px)') : { matches: false };
+  function applyLayout() {
+    if (desktop.matches) document.querySelectorAll('section.card > details').forEach(function (d) { d.open = true; });
+    if (map) map.invalidateSize();
+  }
   try { if (localStorage.getItem('mapOpen') === '1') mapDetails.open = true; } catch (e) { /* storage blocked */ }
+  applyLayout();
+  if (desktop.addEventListener) desktop.addEventListener('change', applyLayout);
   mapDetails.addEventListener('toggle', function () {
-    try { localStorage.setItem('mapOpen', mapDetails.open ? '1' : '0'); } catch (e) { /* storage blocked */ }
+    if (!desktop.matches) try { localStorage.setItem('mapOpen', mapDetails.open ? '1' : '0'); } catch (e) { /* storage blocked */ }
     if (mapDetails.open && state.data) openMap();
   });
 
@@ -533,6 +551,9 @@
   }
   var geoBtn = document.getElementById('geo-btn');
   if (navigator.geolocation) { geoBtn.hidden = false; geoBtn.addEventListener('click', function () { locate(geoBtn); }); }
+
+  // Long TFR text is clamped on desktop (CSS); a click shows all of it.
+  document.addEventListener('click', function (e) { if (e.target.classList && e.target.classList.contains('clamp')) e.target.classList.toggle('open'); });
 
   document.getElementById('zip-form').addEventListener('submit', function (e) {
     e.preventDefault();

@@ -96,7 +96,9 @@ How the thresholds are applied:
 
 The **Map** card (Leaflet, loaded only when opened; street map or FAA VFR sectional) shows the point, the TFR radius, TFR shapes, the LAANC facility map grid colour-coded by ceiling (numbers appear when zoomed in), controlled airspace, restricted areas, stadiums and METAR stations. It remembers whether it was open.
 
-Each information card (TFRs, Airspace & LAANC, METAR, Next 6 hours, NWS alerts, Kp & daylight) starts collapsed. It shows only its title and what it contributes to the banner: GO, CAUTION, NO-GO REVIEW, or UNAVAILABLE when that card's source failed. Tap a card to open it. Cards stay open across the 5-minute refreshes. The official-source links are always shown.
+On screens 1000 px and wider the page is a dashboard: status, Airspace & LAANC and TFRs on the left, the map in a tall panel that stays in view, and the weather cards beside it (a third column from 1500 px). All cards start open there, the map can't be collapsed, and long TFR text is clamped to four lines (click to show all). The map's first view covers the airspace radius plus the nearest edge of each local TFR. The phone layout below is unchanged.
+
+Each information card (TFRs, Airspace & LAANC, METAR, Next 6 hours, NWS alerts, Kp & daylight) starts collapsed on phones. It shows only its title and what it contributes to the banner: GO, CAUTION, NO-GO REVIEW, or UNAVAILABLE when that card's source failed. Tap a card to open it. Cards stay open across the 5-minute refreshes. The official-source links are always shown.
 
 ## Data sources (all keyless)
 

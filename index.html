@@ -113,6 +113,32 @@ body.landing #banner, body.landing #place, body.landing section.card, body.landi
 .sw-x { background: #d1000040; border-color: #d10000 !important; } .sw-t { background: #ff000030; border-color: #ff0000 !important; }
 #sample { background: #7a00b5; color: #fff; font-weight: 900; text-align: center; padding: 4px; border-radius: 6px; margin-top: 8px; }
 @media (max-width: 420px) { body { font-size: 18px; } #banner .lvl { font-size: 2rem; } .links { grid-template-columns: 1fr; } }
+
+/* Layout. Phone: one column in the order below (the column wrappers dissolve). Desktop: a
+   dashboard with status/airspace/TFRs, a tall map that stays in view, and the weather. */
+.dash { display: flex; flex-direction: column; }
+.dash > .col { display: contents; }
+#banner { order: 1; } #s-map { order: 2; } #s-tfr { order: 3; } #s-air { order: 4; } .col-wx > section { order: 5; }
+@media (min-width: 1000px) {
+  body { font-size: 16px; }
+  main { max-width: 1840px; }
+  body.landing main { max-width: 760px; }
+  body:not(.landing) .dash { display: grid; grid-template-columns: minmax(380px, 1fr) minmax(0, 1.5fr); grid-template-areas: "status map" "wx map"; gap: 0 14px; align-items: start; }
+  body:not(.landing) .dash > .col { display: block; }
+  .col-status { grid-area: status; } .col-wx { grid-area: wx; }
+  .col-map { grid-area: map; position: sticky; top: 10px; }
+  #banner { margin-top: 0; }
+  #banner .lvl { font-size: 2.6rem; }
+  #s-map > details > summary { display: none; }
+  #s-map > details > .body { padding: 10px; }
+  #map { height: calc(100vh - 200px); min-height: 440px; }
+  .clamp:not(.open) { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; cursor: pointer; }
+  .links { grid-template-columns: repeat(6, 1fr); }
+  .links a { padding: 10px 6px; }
+}
+@media (min-width: 1500px) {
+  body:not(.landing) .dash { grid-template-columns: minmax(360px, 1fr) minmax(0, 1.7fr) minmax(360px, 1fr); grid-template-areas: "status map wx"; }
+}
 </style>
 </head>
 <body>
@@ -132,12 +158,19 @@ body.landing #banner, body.landing #place, body.landing section.card, body.landi
     <button id="geo-btn" type="button" hidden>📍 Use my location</button>
   </section>
 
+  <div class="dash">
+  <div class="col col-status">
   <div id="banner" class="lv-x loading" role="status" aria-live="polite">
     <div class="lvl">LOADING…</div>
     <div class="asof">Checking FAA TFRs, METAR/TAF, NWS and Kp</div>
     <div class="bar"></div>
     <noscript><div class="stale">JavaScript is required. Check official FAA/NWS sources.</div></noscript>
   </div>
+  <section id="s-air" class="card"><details><summary><h2>Airspace &amp; LAANC</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
+  <section id="s-tfr" class="card"><details><summary><h2>TFRs</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
+  </div>
+
+  <div class="col col-map">
 
   <section id="s-map" class="card"><details><summary><h2>Map</h2></summary><div class="body">
     <div id="map" role="img" aria-label="Map of the location, LAANC grid, airspace, restrictions and TFRs"></div>
@@ -148,12 +181,15 @@ body.landing #banner, body.landing #place, body.landing section.card, body.landi
     </div>
     <div class="small muted">LAANC numbers appear when zoomed in. Use the layer button to switch to the FAA VFR sectional.</div>
   </div></details></section>
-  <section id="s-tfr" class="card"><details><summary><h2>TFRs</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
-  <section id="s-air" class="card"><details><summary><h2>Airspace &amp; LAANC</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
+  </div>
+
+  <div class="col col-wx">
   <section id="s-metar" class="card"><details><summary><h2>Current conditions (METAR)</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
   <section id="s-fcst" class="card"><details><summary><h2>Next 6 hours</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
   <section id="s-alerts" class="card"><details><summary><h2>NWS alerts</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
   <section id="s-sky" class="card"><details><summary><h2>Kp &amp; daylight</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
+  </div>
+  </div>
   <section id="s-links"><h2>Official sources</h2>
     <div class="links">
       <a href="https://tfr.faa.gov/tfr3/?page=map" target="_blank" rel="noopener">FAA TFR map</a>
