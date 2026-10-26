@@ -1,0 +1,119 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -74.46,
+       40.5
+      ],
+      [
+       -74.46,
+       40.50833333333333
+      ],
+      [
+       -74.45166666666665,
+       40.50833333333333
+      ],
+      [
+       -74.45166666666665,
+       40.5
+      ],
+      [
+       -74.46,
+       40.5
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "CEILING": 0,
+    "MAP_EFF": "10/1/2026",
+    "APT1_ICAO": "KSMQ",
+    "APT1_NAME": "Somerset",
+    "APT1_LAANC": 1,
+    "AIRSPACE_1": "D"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -74.45,
+       40.5
+      ],
+      [
+       -74.45,
+       40.50833333333333
+      ],
+      [
+       -74.44166666666666,
+       40.50833333333333
+      ],
+      [
+       -74.44166666666666,
+       40.5
+      ],
+      [
+       -74.45,
+       40.5
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "CEILING": 100,
+    "MAP_EFF": "10/1/2026",
+    "APT1_ICAO": "KSMQ",
+    "APT1_NAME": "Somerset",
+    "APT1_LAANC": 1,
+    "AIRSPACE_1": "D"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -74.46,
+       40.5083
+      ],
+      [
+       -74.46,
+       40.51663333333333
+      ],
+      [
+       -74.45166666666665,
+       40.51663333333333
+      ],
+      [
+       -74.45166666666665,
+       40.5083
+      ],
+      [
+       -74.46,
+       40.5083
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "CEILING": 200,
+    "MAP_EFF": "10/1/2026",
+    "APT1_ICAO": "KSMQ",
+    "APT1_NAME": "Somerset",
+    "APT1_LAANC": 1,
+    "AIRSPACE_1": "D"
+   }
+  }
+ ]
+}

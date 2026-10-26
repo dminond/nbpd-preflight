@@ -17,6 +17,8 @@ import { readFile, writeFile, rename } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { rad, distanceNm, bearingDeg, compass, projector, segDist, pointInPoly, bbox } from './geo.mjs';
+import { fetchAirspace, evaluateAirspace } from './airspace.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const LEVELS = ['GO', 'CAUTION', 'NO-GO REVIEW'];
@@ -147,21 +149,7 @@ function findAll(el, name, out = []) {
 
 // ---------------------------------------------------------------- geo
 
-const R_NM = 3440.065;
-const rad = d => d * Math.PI / 180, deg = r => r * 180 / Math.PI;
-
-export function distanceNm(a, b) {
-  const dLat = rad(b.lat - a.lat), dLon = rad(b.lon - a.lon);
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
-  return 2 * R_NM * Math.asin(Math.min(1, Math.sqrt(h)));
-}
-export function bearingDeg(a, b) {
-  const y = Math.sin(rad(b.lon - a.lon)) * Math.cos(rad(b.lat));
-  const x = Math.cos(rad(a.lat)) * Math.sin(rad(b.lat)) - Math.sin(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.cos(rad(b.lon - a.lon));
-  return (deg(Math.atan2(y, x)) + 360) % 360;
-}
-const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-export const compass = b => COMPASS[Math.round(b / 22.5) % 16];
+export { distanceNm, bearingDeg, compass } from './geo.mjs';
 
 // Parse "40.48620000N", "074.45180000W", "404910N", "0742706.5W", "-74.45".
 export function parseCoord(s, isLon) {
@@ -185,29 +173,6 @@ export function parseCoord(s, isLon) {
   if (hemi === 'S' || hemi === 'W') val = -Math.abs(val);
   if (isLon ? Math.abs(val) > 180 : Math.abs(val) > 90) return null;
   return val;
-}
-
-// Local flat projection (NM) around the reference point; fine within ~100 NM.
-function projector(ref) {
-  const k = Math.cos(rad(ref.lat)) * 60;
-  return {
-    fwd: p => ({ x: (p.lon - ref.lon) * k, y: (p.lat - ref.lat) * 60 }),
-    inv: q => ({ lat: ref.lat + q.y / 60, lon: ref.lon + q.x / k }),
-  };
-}
-function segDist(p, a, b) {
-  const dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
-  let t = l2 ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2 : 0;
-  t = Math.max(0, Math.min(1, t));
-  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
-}
-function pointInPoly(p, poly) {
-  let inside = false;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const a = poly[i], b = poly[j];
-    if ((a.y > p.y) !== (b.y > p.y) && p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x) inside = !inside;
-  }
-  return inside;
 }
 
 // ---------------------------------------------------------------- TFR
@@ -286,7 +251,8 @@ export function parseTfrDetail(xml, center) {
   const not = findAll(doc, 'Not')[0] || doc;
   const areas = findAll(doc, 'TFRAreaGroup');
   const out = { altitudes: [], effective: toIsoUtc(txt(not, 'dateEffective')), expires: toIsoUtc(txt(not, 'dateExpire')),
-    title: txt(not, 'txtDescrUSNS') || txt(not, 'txtDescrPurpose') || null, distanceNm: null, bearingDeg: null, inside: false };
+    title: txt(not, 'txtDescrUSNS') || txt(not, 'txtDescrPurpose') || null, distanceNm: null, bearingDeg: null, inside: false, shapes: [] };
+  const ll = q => { const p = proj.inv(q); return [Math.round(p.lat * 1e5) / 1e5, Math.round(p.lon * 1e5) / 1e5]; };
   let best = null;
   for (const g of areas.length ? areas : [doc]) {
     const area = findAll(g, 'aseTFRArea')[0] || g;
@@ -296,6 +262,8 @@ export function parseTfrDetail(xml, center) {
     const geom = tfrAreaGeometry(g, proj);
     if (!geom) continue;
     let d, ctr;
+    // Shapes in lat/lon for the page's map.
+    out.shapes.push(geom.kind === 'circle' ? { type: 'circle', center: ll(geom.c), rNm: geom.r } : { type: 'polygon', ring: geom.pts.map(ll) });
     if (geom.kind === 'circle') {
       const dc = Math.hypot(geom.c.x, geom.c.y);
       d = Math.max(0, dc - geom.r); ctr = geom.c;
@@ -440,10 +408,6 @@ export function nearestReports(arr, center, count, timeOf) {
     .sort((a, b) => a.distanceNm - b.distanceNm)
     .slice(0, count);
 }
-function bbox({ lat, lon }, nm) {
-  const dLat = nm / 60, dLon = nm / (60 * Math.cos(rad(lat)));
-  return [lat - dLat, lon - dLon, lat + dLat, lon + dLon].map(v => v.toFixed(3)).join(',');
-}
 
 // ---------------------------------------------------------------- NWS
 
@@ -561,7 +525,7 @@ export async function run(args) {
   const nwsPoint = `${lat.toFixed(4)},${lon.toFixed(4)}`;
 
   let awcChain;
-  const [tfrs, metarRaw, tafRaw, points, alertsRaw, kpRaw] = await Promise.all([
+  const [tfrs, metarRaw, tafRaw, points, alertsRaw, kpRaw, airspaceRaw] = await Promise.all([
     step('tfr', () => fetchTfrs(cfg, T, now, reasons)),
     // aviationweather.gov asks clients to space requests, so METAR then TAF in sequence.
     awcChain = step('metar', () => T.getJSON('metar', `${awc}/metar?${metarQuery}&format=json`, { retries: 1 })),
@@ -569,6 +533,7 @@ export async function run(args) {
     step('nws_points', () => T.getJSON('nws_points', `https://api.weather.gov/points/${nwsPoint}`, { nws: true })),
     step('nws_alerts', () => T.getJSON('nws_alerts', `https://api.weather.gov/alerts/active?point=${nwsPoint}`, { nws: true })),
     step('kp', () => T.getJSON('kp', 'https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json', { shared: true })),
+    step('airspace', () => fetchAirspace(cfg, T)),
   ]);
 
   // Hourly forecast + gust grid depend on /points.
@@ -593,7 +558,7 @@ export async function run(args) {
       stations = near.map(n => String(n.r.icaoId || n.r.stationId).toUpperCase());
       return near.map(({ r, distanceNm, compass }) => {
         const id = String(r.icaoId || r.stationId).toUpperCase();
-        try { return { ...decodeMetar({ ...r, icaoId: id }, now, th, reasons), distanceNm, compass }; } catch (e) {
+        try { return { ...decodeMetar({ ...r, icaoId: id }, now, th, reasons), distanceNm, compass, lat: Number(r.lat), lon: Number(r.lon) }; } catch (e) {
           reasons.push({ level: 1, source: 'metar', text: `${id}: METAR could not be decoded` });
           return { station: id, raw: r.rawOb || null, level: 1, flags: [`could not decode (${e.message})`], decodeError: true, distanceNm, compass };
         }
@@ -642,8 +607,14 @@ export async function run(args) {
     if (kp.level) reasons.push({ level: kp.level, source: 'kp', text: `Kp ${kp.kp}` });
   }
 
+  // MSL airspace floors need the ground elevation; the NWS grid carries it.
+  const elev = gridRaw?.properties?.elevation;
+  const groundFt = num(elev?.value) == null ? null : String(elev.unitCode || '').endsWith(':m') ? elev.value * 3.28084 : elev.value;
+  const airspace = airspaceRaw ? await step('airspace_decode', async () => evaluateAirspace(airspaceRaw, cfg, groundFt, now, reasons)) : null;
+  if (sources.airspace_decode) { if (!sources.airspace_decode.ok) sources.airspace = sources.airspace_decode; delete sources.airspace_decode; }
+
   // A missing source is itself a caution: the pilot must check it manually.
-  const LABEL = { tfr: 'TFR list', metar: 'METAR', taf: 'TAF', nws_points: 'NWS point lookup', nws_hourly: 'NWS hourly forecast', nws_alerts: 'NWS alerts', kp: 'Kp index' };
+  const LABEL = { airspace: 'FAA airspace data', tfr: 'TFR list', metar: 'METAR', taf: 'TAF', nws_points: 'NWS point lookup', nws_hourly: 'NWS hourly forecast', nws_alerts: 'NWS alerts', kp: 'Kp index' };
   for (const [k, s] of Object.entries(sources)) {
     if (!s.ok && LABEL[k]) reasons.push({ level: 1, source: k, text: `${LABEL[k]} unavailable — check official source` });
   }
@@ -660,6 +631,7 @@ export async function run(args) {
     overall: { level: LEVELS[lvl], levelNum: lvl, reasons },
     sources,
     tfrs,
+    airspace,
     metars,
     tafs,
     hourly,

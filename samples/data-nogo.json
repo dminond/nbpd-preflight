@@ -6,18 +6,26 @@
  },
  "config": {
   "name": "NBPD UAS Pre-Flight",
+  "zip": null,
+  "nearZip": null,
   "center": {
    "lat": 40.4862,
    "lon": -74.4518,
    "label": "New Brunswick, NJ"
   },
   "timeZone": "America/New_York",
-  "tfrRadiusNm": 30,
+  "tfrRadiusNm": 8,
+  "tfrStates": [
+   "NJ",
+   "NY",
+   "PA"
+  ],
   "stations": [
    "KSMQ",
    "KEWR",
    "KTTN"
   ],
+  "stationSearchNm": null,
   "staleMinutes": 30,
   "thresholds": {
    "windKt": {
@@ -45,6 +53,12 @@
    },
    "tfrNm": {
     "nogo": 5
+   },
+   "airspace": {
+    "controlledLevel": 1,
+    "zeroCeilingLevel": 2,
+    "nearNm": 0.5,
+    "stadiumLevel": 0
    },
    "metarMaxAgeMin": 90
   }
@@ -104,14 +118,14 @@
     "text": "Kp 5.33"
    },
    {
-    "level": 1,
-    "source": "tfr",
-    "text": "TFR 6/3333 5.6 NM NE"
+    "level": 2,
+    "source": "airspace",
+    "text": "Class D (KSMQ): 0 ft facility map ceiling — no LAANC approval; needs FAA authorization or your COA"
    },
    {
     "level": 1,
     "source": "tfr",
-    "text": "TFR 6/4321 8.3 NM W"
+    "text": "TFR 6/3333 5.6 NM NE"
    },
    {
     "level": 1,
@@ -153,23 +167,27 @@
  "sources": {
   "metar": {
    "ok": true,
-   "ms": 2
+   "ms": 3
   },
   "nws_points": {
    "ok": true,
-   "ms": 2
+   "ms": 3
+  },
+  "kp": {
+   "ok": true,
+   "ms": 3
   },
   "nws_alerts": {
    "ok": true,
-   "ms": 2
+   "ms": 3
   },
-  "kp": {
+  "airspace": {
    "ok": true,
    "ms": 2
   },
   "taf": {
    "ok": true,
-   "ms": 3
+   "ms": 1
   },
   "tfr": {
    "ok": true,
@@ -203,6 +221,16 @@
     "distanceNm": 2.9,
     "bearingDeg": 320,
     "inside": false,
+    "shapes": [
+     {
+      "type": "circle",
+      "center": [
+       40.65,
+       -74.63333
+      ],
+      "rNm": 10
+     }
+    ],
     "compass": "NW",
     "centerDistanceNm": 12.9,
     "level": 2
@@ -224,29 +252,18 @@
     "distanceNm": 5.6,
     "bearingDeg": 55,
     "inside": false,
+    "shapes": [
+     {
+      "type": "circle",
+      "center": [
+       40.55,
+       -74.33333
+      ],
+      "rNm": 1
+     }
+    ],
     "compass": "NE",
     "centerDistanceNm": 6.6,
-    "level": 1
-   },
-   {
-    "id": "6/4321",
-    "type": "HAZARDS",
-    "facility": "ZNY",
-    "state": "NJ",
-    "description": "Hillsborough, NJ, Thursday, October 15, 2026 through Friday, October 16, 2026 UTC",
-    "created": "10/14/2026",
-    "detailUrl": "https://tfr.faa.gov/tfr3/?page=detail_6_4321",
-    "altitudes": [
-     "SFC – 2,500 FT MSL"
-    ],
-    "effective": "2026-10-15T12:00:00.000Z",
-    "expires": "2026-10-16T23:59:00.000Z",
-    "title": "Hillsborough, NJ wildfire suppression & aerial operations",
-    "distanceNm": 8.3,
-    "bearingDeg": 275,
-    "inside": false,
-    "compass": "W",
-    "centerDistanceNm": 9.5,
     "level": 1
    },
    {
@@ -279,6 +296,7 @@
     "distanceNm": null,
     "bearingDeg": null,
     "inside": false,
+    "shapes": [],
     "distanceUnknown": true,
     "note": "distance unknown — check FAA (geometry not parsed)",
     "level": 1
@@ -305,6 +323,127 @@
    }
   ],
   "checked": 6
+ },
+ "airspace": {
+  "radiusNm": 3,
+  "groundElevFt": 79,
+  "point": {
+   "controlled": true,
+   "cls": "D",
+   "name": "SOMERSET CLASS D",
+   "airport": "KSMQ",
+   "airportName": "Somerset",
+   "ceilingFt": 0,
+   "laanc": true,
+   "partTime": false
+  },
+  "nearestControlled": null,
+  "overhead": [],
+  "restrictions": [
+   {
+    "kind": "NSUFR",
+    "label": "national security UAS flight restriction",
+    "name": "Raritan Arsenal",
+    "inside": false,
+    "distanceNm": 0.9,
+    "compass": "SE",
+    "floor": "Surface",
+    "ceiling": "400' AGL",
+    "note": "14 CFR 99.7"
+   }
+  ],
+  "other": [],
+  "stadiums": [
+   {
+    "name": "SHI Stadium",
+    "city": "Piscataway",
+    "distanceNm": 1.7,
+    "compass": "NNW",
+    "status": "Open"
+   }
+  ],
+  "mapEffective": "10/1/2026",
+  "level": 2,
+  "map": {
+   "cells": [
+    [
+     40.4833,
+     -74.4583,
+     40.49163,
+     -74.44997,
+     0
+    ]
+   ],
+   "classes": [
+    {
+     "cls": "D",
+     "name": "SOMERSET CLASS D",
+     "floor": "SFC",
+     "surface": true,
+     "rings": [
+      [
+       [
+        40.46,
+        -74.48
+       ],
+       [
+        40.51,
+        -74.48
+       ],
+       [
+        40.51,
+        -74.42
+       ],
+       [
+        40.46,
+        -74.42
+       ],
+       [
+        40.46,
+        -74.48
+       ]
+      ]
+     ]
+    }
+   ],
+   "areas": [
+    {
+     "kind": "NSUFR",
+     "name": "Raritan Arsenal",
+     "rings": [
+      [
+       [
+        40.47,
+        -74.44
+       ],
+       [
+        40.475,
+        -74.44
+       ],
+       [
+        40.475,
+        -74.435
+       ],
+       [
+        40.47,
+        -74.435
+       ],
+       [
+        40.47,
+        -74.44
+       ]
+      ]
+     ]
+    }
+   ],
+   "stadiums": [
+    {
+     "name": "SHI Stadium",
+     "lat": 40.513,
+     "lon": -74.465
+    }
+   ]
+  }
  },
  "metars": [
   {

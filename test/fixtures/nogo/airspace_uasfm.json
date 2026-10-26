@@ -1,0 +1,43 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -74.4583,
+       40.4833
+      ],
+      [
+       -74.4583,
+       40.49163333333333
+      ],
+      [
+       -74.44996666666665,
+       40.49163333333333
+      ],
+      [
+       -74.44996666666665,
+       40.4833
+      ],
+      [
+       -74.4583,
+       40.4833
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "CEILING": 0,
+    "MAP_EFF": "10/1/2026",
+    "APT1_ICAO": "KSMQ",
+    "APT1_NAME": "Somerset",
+    "APT1_LAANC": 1,
+    "AIRSPACE_1": "D"
+   }
+  }
+ ]
+}

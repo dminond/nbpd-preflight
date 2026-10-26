@@ -45,6 +45,22 @@ const dead = await run({ config: 'config.json', out, fixtures: ['test/fixtures/d
 checkShape(dead);
 assert.ok(Object.values(dead.sources).every(s => !s.ok));
 assert.equal(dead.overall.level, 'CAUTION', 'all sources down is never GO');
+// Airspace from the fixture layers (see make-fixtures.mjs).
+assert.equal(full.sources.airspace.ok, true);
+assert.equal(full.airspace.point.cls, 'G', 'Class G at the point');
+assert.deepEqual(full.airspace.nearestControlled, { cls: 'D', name: 'SOMERSET CLASS D', distanceNm: 0.8, compass: 'N' });
+assert.deepEqual(full.airspace.overhead.map(o => [o.cls, o.floorAgl]), [['B', 2921]], 'Class B shelf 3,000 MSL over 79 ft ground');
+assert.equal(full.airspace.stadiums[0].name, 'SHI Stadium');
+assert.ok(!full.overall.reasons.some(r => r.source === 'airspace'), 'stadium and nearby areas are information by default');
+const raritan = full.airspace.restrictions.find(r => r.kind === 'NSUFR');
+assert.ok(!raritan.inside && raritan.distanceNm > 0.5 && raritan.distanceNm < 1.2, `99.7 area outside nearNm (${raritan.distanceNm})`);
+assert.equal(full.airspace.map.cells.length, 3);
+assert.deepEqual(full.airspace.map.cells[0].slice(0, 2), [40.5, -74.46]);
+assert.equal(nogo.airspace.point.ceilingFt, 0);
+assert.ok(nogo.overall.reasons.some(r => r.source === 'airspace' && r.level === 2 && /0 ft facility map ceiling/.test(r.text)));
+assert.ok(dead.sources.airspace.error, 'airspace failure is reported');
+assert.ok(dead.overall.reasons.some(r => r.source === 'airspace' && /unavailable/.test(r.text)), 'missing airspace is a caution');
+assert.ok(full.tfrs.local.every(t => t.distanceUnknown || t.shapes.length), 'parsed TFRs carry map shapes');
 console.log('all tests passed');
 
 // METAR robustness: obsTime formats, 204 empty bodies, malformed fields.
@@ -129,3 +145,47 @@ assert.deepEqual(pcfg.center, { lat: 40.5, lon: -74.45, label: `Near ${nz.city},
 assert.equal(pcfg.zip, null);
 assert.deepEqual(pcfg.tfrStates, ['NJ', 'DE', 'NY', 'PA']);
 console.log('zip tests passed');
+
+// Airspace rules with hand-built layers.
+const { evaluateAirspace } = await import('../scripts/airspace.mjs');
+const P = { lat: 40.4862, lon: -74.4518 };
+const sq = (d, props) => ({ type: 'Feature', properties: props, geometry: { type: 'Polygon', coordinates: [[[P.lon - d, P.lat - d], [P.lon - d, P.lat + d], [P.lon + d, P.lat + d], [P.lon + d, P.lat - d], [P.lon - d, P.lat - d]]] } });
+const noLayers = { uasfm: [], classes: [], sua: [], nsufr: [], nsufrPartTime: [], nda: [], stadiums: [] };
+const acfg = { center: P, airspaceRadiusNm: 3, thresholds: { airspace: { controlledLevel: 1, zeroCeilingLevel: 2, nearNm: 0.5 } } };
+const ev = (layers, ground, cfg = acfg) => { const rs = []; const a = evaluateAirspace({ ...noLayers, ...layers }, cfg, ground, now, rs); return { a, rs }; };
+const shelf = sq(0.05, { NAME: 'SHELF B', CLASS: 'B', LOCAL_TYPE: 'CLASS_B', LOWER_VAL: 500, LOWER_UOM: 'FT', LOWER_CODE: 'MSL', WKHR_CODE: 'H24' });
+let t = ev({ classes: [shelf] }, 200);
+assert.equal(t.a.point.cls, 'B', '500 MSL over 200 ft ground is 300 ft AGL: controlled');
+assert.ok(/no facility map ceiling/.test(t.rs[0].text) && t.rs[0].level === 1);
+t = ev({ classes: [shelf] }, 50);
+assert.equal(t.a.point.cls, 'G', '500 MSL over 50 ft ground is 450 ft AGL: above Part 107 altitude');
+assert.equal(t.a.overhead[0].floorAgl, 450);
+t = ev({ classes: [shelf] }, null);
+assert.equal(t.a.point.controlled, null, 'MSL floor with unknown ground is not assumed clear');
+assert.equal(t.rs[0].level, 1);
+t = ev({ classes: [sq(0.05, { NAME: 'E5', CLASS: 'E', LOCAL_TYPE: 'CLASS_E5', LOWER_VAL: 700, LOWER_CODE: 'SFC' })] }, 0);
+assert.equal(t.a.point.cls, 'G', 'Class E from 700 ft AGL leaves Class G at drone altitudes');
+// Hole in a polygon (even-odd): point in the hole is outside.
+const donut = sq(0.05, { NAME: 'R-1', TYPE_CODE: 'R', LOWER_VAL: '0', LOWER_CODE: 'SFC', UPPER_VAL: '5000', UPPER_CODE: 'MSL' });
+donut.geometry.coordinates.push(sq(0.01, {}).geometry.coordinates[0]);
+t = ev({ sua: [donut] }, 0);
+assert.equal(t.a.restrictions[0].inside, false, 'point in the hole');
+assert.equal(t.rs[0].level, 1, '0.6 NM from the hole edge is near: CAUTION');
+t = ev({ sua: [sq(0.05, { NAME: 'P-99', TYPE_CODE: 'P', LOWER_VAL: '0', LOWER_CODE: 'SFC' })] }, 0);
+assert.equal(t.rs[0].level, 2, 'inside a prohibited area');
+t = ev({ sua: [sq(0.05, { NAME: 'HIGH R', TYPE_CODE: 'R', LOWER_VAL: '5000', LOWER_UOM: 'FT', LOWER_CODE: 'MSL' })] }, 0);
+assert.equal(t.rs.length, 0, 'restricted area starting at 5,000 MSL does not affect a 400 ft flight');
+t = ev({ sua: [sq(0.05, { NAME: 'MOA X', TYPE_CODE: 'MOA', LOWER_VAL: '500', LOWER_CODE: 'SFC' })] }, 0);
+assert.equal(t.rs.length, 0); assert.equal(t.a.other[0].name, 'MOA X');
+t = ev({ nsufrPartTime: [sq(0.05, { Facility: 'Base X', ACTIVETIME: now.getTime() - 3600e3, ENDTIME: now.getTime() - 60e3 })] }, 0);
+assert.equal(t.rs.length, 0, 'ended part-time restriction does not flag');
+t = ev({ uasfm: [sq(0.004, { CEILING: 200, APT1_ICAO: 'KTTN', APT1_LAANC: 0, AIRSPACE_1: 'D' })] }, 0);
+assert.ok(/LAANC not available/.test(t.rs[0].text) && t.a.point.ceilingFt === 200, 'grid cell without a class polygon still means controlled');
+t = ev({}, 0, { ...acfg, center: { lat: 38.8977, lon: -77.0365 } });
+assert.ok(t.rs.some(r => r.level === 2 && /Flight Restricted Zone/.test(r.text)), 'DC FRZ');
+t = ev({}, 0, { ...acfg, center: { lat: 38.978, lon: -76.492 } });
+assert.ok(t.rs.some(r => r.level === 1 && /SFRA/.test(r.text)) && !t.rs.some(r => r.level === 2), 'DC SFRA outside the FRZ');
+// ArcGIS reports query errors with HTTP 200; that must fail the source, not read as "no airspace".
+const { fetchAirspace } = await import('../scripts/airspace.mjs');
+await assert.rejects(fetchAirspace(acfg, { getJSON: async () => ({ error: { code: 400, message: 'Invalid query' } }) }), /Invalid query/);
+console.log('airspace tests passed');

@@ -59,6 +59,8 @@ Setup: import the repository in Vercel (framework preset **Other**, no build com
 | `forecastHours` | Number of hourly forecast rows shown. |
 | `staleMinutes` | Age after which the page shows DATA STALE. |
 | `thresholds` | Caution and no-go-review limits (see below). |
+| `airspaceRadiusNm` | Radius for the airspace card and map (restricted areas, nearest controlled airspace). Default: 3. |
+| `thresholds.airspace` | `controlledLevel` (1 = CAUTION) inside controlled airspace; `zeroCeilingLevel` (2 = NO-GO REVIEW) on a 0 ft facility map ceiling; `nearNm` (0.5) for "near a restricted area"; `stadiumLevel` (0 = information only). Agencies flying under a COA can lower these. |
 | `tfrDetailXmlUrls` | Per-TFR XML URL patterns, tried in order. `{id}` becomes `6_1234` for NOTAM `6/1234`. Edit these if the FAA moves the files. |
 
 Commit a change to `config.json` on `main` and the workflow redeploys automatically.
@@ -75,6 +77,7 @@ Commit a change to `config.json` on `main` and the workflow redeploys automatica
 | Kp | ≥ 4 | ≥ 5 |
 | TFR | within `tfrRadiusNm`, or distance unknown | within 5 NM, or covering the point |
 | NWS alert | Advisory | Watch or Warning |
+| Airspace | controlled airspace below 400 ft AGL (authorization needed); within 0.5 NM of a prohibited/restricted area or 99.7 restriction; DC SFRA | 0 ft facility map ceiling; inside a prohibited or restricted area, a 99.7 national security restriction, national defense airspace, or the DC FRZ |
 
 How the thresholds are applied:
 
@@ -86,11 +89,14 @@ How the thresholds are applied:
   - If `data.json` is more than 30 minutes old, the page shows DATA STALE and raises the banner to at least CAUTION.
   - A METAR older than 90 minutes (`metarMaxAgeMin`) is flagged CAUTION.
 - **TFR timing doesn't change the level.** Each TFR shows **ACTIVE NOW**, **STARTS IN …** (highlighted when it starts within 3 hours), **ENDED … ago** or **TIMES UNKNOWN**. The status is computed in the browser, so it stays current between refreshes. Upcoming and ended TFRs still raise the banner, because the FAA list is the source of truth and the time parsing can't be checked against every TFR format.
+- **Airspace is judged at the point, for flight up to 400 ft AGL.** Class B/C/D/E counts as controlled only where its floor is below 400 ft AGL; MSL floors are converted with the ground elevation from the NWS grid (unknown elevation is CAUTION, never assumed clear). Class E from 700/1,200 ft AGL and Mode C veils don't count. MOAs, warning and alert areas, and stadiums (the FDC 4/3621 event TFR is only active around games) are shown for information. The DC FRZ and SFRA aren't in the FAA layers, so they're approximated as 15 and 30 NM circles around DCA.
 - **The page adds a note outside sunrise to sunset.** During civil twilight or at night it reminds the pilot that anti-collision lighting is required (14 CFR 107.29). This note does not change the banner.
 
 ## Page layout
 
-Each information card (TFRs, METAR, Next 6 hours, NWS alerts, Kp & daylight) starts collapsed. It shows only its title and what it contributes to the banner: GO, CAUTION, NO-GO REVIEW, or UNAVAILABLE when that card's source failed. Tap a card to open it. Cards stay open across the 5-minute refreshes. The official-source links are always shown.
+The **Map** card (Leaflet, loaded only when opened; street map or FAA VFR sectional) shows the point, the TFR radius, TFR shapes, the LAANC facility map grid colour-coded by ceiling (numbers appear when zoomed in), controlled airspace, restricted areas, stadiums and METAR stations. It remembers whether it was open.
+
+Each information card (TFRs, Airspace & LAANC, METAR, Next 6 hours, NWS alerts, Kp & daylight) starts collapsed. It shows only its title and what it contributes to the banner: GO, CAUTION, NO-GO REVIEW, or UNAVAILABLE when that card's source failed. Tap a card to open it. Cards stay open across the 5-minute refreshes. The official-source links are always shown.
 
 ## Data sources (all keyless)
 
@@ -101,6 +107,8 @@ Each information card (TFRs, METAR, Next 6 hours, NWS alerts, Kp & daylight) sta
 | METAR / TAF | `https://aviationweather.gov/api/data/{metar,taf}?ids=…&format=json` |
 | NWS | `/points/{lat},{lon}`, then `forecastHourly` and `forecastGridData` (for gusts), plus `/alerts/active?point=` |
 | Kp | `https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json` |
+| FAA airspace | UAS Data Delivery System layers on `https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services/…/FeatureServer/0/query` (one envelope query each): `FAA_UAS_FacilityMap_Data`, `Class_Airspace`, `Special_Use_Airspace`, `DoD_Mar_13` (99.7 restrictions), `Part_Time_National_Security_UAS_Flight_Restrictions`, `National_Defense_Airspace_TFR_Areas`, `Stadiums`. ArcGIS reports query errors with HTTP 200; those fail the source. |
+| Map tiles (browser) | `tile.openstreetmap.org` (light use, attribution required) and the FAA `VFR_Sectional` tile service |
 
 How TFRs are filtered:
 
@@ -149,6 +157,8 @@ The fixtures in `test/fixtures/` are synthetic. They follow each API's response 
 index.html  app.js  suncalc.js   page (vanilla JS/CSS, no build, no CDN)
 config.json                      hand-edited settings
 scripts/fetch.mjs                fetch + filter + thresholds -> data.json
+scripts/airspace.mjs  geo.mjs    FAA airspace layers -> airspace verdict + map data; shared geometry
+vendor/leaflet/                  Leaflet 1.9.4 (BSD-2-Clause), loaded by the map card
 .github/workflows/refresh.yml    cron every 10 min + manual run -> GitHub Pages
 api/data.mjs  vercel.json         Vercel: /NNNNN routing, on-demand data per ZIP behind the CDN cache
 scripts/location.mjs  data/zips.json  ZIP -> location config; scripts/build-zips.mjs rebuilds the data

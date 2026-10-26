@@ -281,9 +281,145 @@
     }
   }
 
+  // ------------------------------------------------------------ airspace
+  function nm(d, dir) { return d === 0 ? 'here' : d + ' NM ' + (dir || ''); }
+  function renderAirspace() {
+    var d = state.data, b = body('s-air'), a = d.airspace;
+    if (!srcOk('airspace') || !a) { append(b, srcErr('airspace', 'FAA airspace data', 'https://www.faa.gov/uas/getting_started/b4ufly')); return; }
+    var pt = a.point || {};
+    if (pt.controlled) {
+      append(b, h('div', { class: 'item' },
+        h('div', { class: 'row' }, h('span', { class: 'big', text: 'Class ' + pt.cls + (pt.airport ? ' · ' + pt.airport : '') }), tag(pt.ceilingFt === 0 ? 2 : 1, 'CONTROLLED')),
+        h('div', { text: 'Controlled airspace: Part 107 flight needs FAA authorization (LAANC, FAADroneZone, or your agency’s COA/waiver).' }),
+        h('dl', { class: 'kv' },
+          h('dt', { text: 'LAANC ceiling' }), h('dd', { text: pt.ceilingFt == null ? 'No facility map grid here — request via FAADroneZone' : pt.ceilingFt === 0 ? '0 ft — no automatic approval' : pt.ceilingFt + ' ft AGL' }),
+          h('dt', { text: 'LAANC' }), h('dd', { text: pt.laanc == null ? '—' : pt.laanc ? 'Available' : 'Not available at this airport — use FAADroneZone' }),
+          pt.airportName ? h('dt', { text: 'Airport' }) : null, pt.airportName ? h('dd', { text: pt.airportName }) : null,
+          pt.name ? h('dt', { text: 'Airspace' }) : null, pt.name ? h('dd', { text: pt.name + (pt.partTime ? ' (part-time — check hours)' : '') }) : null)));
+    } else if (pt.controlled === false) {
+      append(b, h('div', { class: 'item' },
+        h('div', { class: 'row' }, h('span', { class: 'big', text: 'Class G' }), tag(0, 'UNCONTROLLED')),
+        h('div', { text: 'No airspace authorization needed at this point up to 400 ft AGL.' }),
+        a.nearestControlled ? h('div', { class: 'small', text: 'Nearest controlled airspace: Class ' + a.nearestControlled.cls + ' (' + a.nearestControlled.name + ') ' + nm(a.nearestControlled.distanceNm, a.nearestControlled.compass) }) : null));
+    } else {
+      append(b, h('div', { class: 'item err', text: 'Airspace class could not be determined here (' + (pt.name || 'MSL floor') + ', ground elevation unknown). Check the sectional or B4UFLY.' }));
+    }
+    a.overhead.forEach(function (o) { append(b, h('div', { class: 'small muted', text: 'Overhead: Class ' + o.cls + ' from ' + o.floor + ' (about ' + o.floorAgl.toLocaleString('en-US') + ' ft AGL)' })); });
+
+    var rs = a.restrictions || [];
+    if (rs.length) {
+      var box = h('div', { class: 'item' }, h('h2', { text: 'Restricted areas within ' + a.radiusNm + ' NM' }));
+      rs.forEach(function (r) {
+        append(box, h('div', { class: 'item' },
+          h('div', { class: 'row' }, h('strong', { text: r.name }), r.inside ? tag(2, 'INSIDE') : h('span', { class: 'small', text: nm(r.distanceNm, r.compass) })),
+          h('div', { class: 'small', text: r.label + (r.floor || r.ceiling ? ' · ' + (r.floor || '?') + ' – ' + (r.ceiling || '?') : '') + (r.times ? ' · ' + r.times : '') + (r.note ? ' · ' + r.note : '') })));
+      });
+      append(b, box);
+    }
+    (a.other || []).forEach(function (o) { append(b, h('div', { class: 'small', text: 'ℹ Inside ' + o.name + ' (' + ({ MOA: 'military operations area', W: 'warning area', A: 'alert area', D: 'danger area' }[o.kind] || o.kind) + ')' + (o.times ? ' · ' + o.times : '') + ' — no sUAS restriction; watch for low-flying aircraft.' })); });
+    (a.stadiums || []).forEach(function (s) { append(b, h('div', { class: 'small', text: '🏟 ' + s.name + ' ' + nm(s.distanceNm, s.compass) + ' — sporting-event TFR (FDC 4/3621) within 3 NM, 1 h before to 1 h after events. Check the schedule.' })); });
+    append(b, h('div', { class: 'small muted', text: 'FAA UAS Data Delivery System' + (a.mapEffective ? ' · facility map effective ' + a.mapEffective : '') +
+      (a.groundElevFt != null ? ' · ground ' + a.groundElevFt + ' ft MSL (NWS)' : '') + '. Confirm with B4UFLY or your LAANC provider before flight.' }));
+  }
+
+  // ------------------------------------------------------------ map
+  // Leaflet is vendored and only loaded when the map card is first opened.
+  var map = null, mapLayers = null, leafletLoading = null;
+  var CEIL_COLORS = [[0, '#d10000'], [100, '#ff7a00'], [200, '#ffc400'], [300, '#7bc043'], [400, '#0b8a3a']];
+  function ceilColor(c) { for (var i = 0; i < CEIL_COLORS.length; i++) if (c <= CEIL_COLORS[i][0]) return CEIL_COLORS[i][1]; return '#0b8a3a'; }
+  var CLASS_STYLE = { B: { color: '#1f5fd1' }, C: { color: '#b000b0' }, D: { color: '#1f5fd1', dashArray: '6 5' }, E: { color: '#b000b0', dashArray: '6 5' } };
+  function loadLeaflet() {
+    if (window.L) return Promise.resolve();
+    return leafletLoading || (leafletLoading = new Promise(function (resolve, reject) {
+      var css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'vendor/leaflet/leaflet.css'; document.head.appendChild(css);
+      var js = document.createElement('script'); js.src = 'vendor/leaflet/leaflet.js'; js.onload = resolve;
+      js.onerror = function () { leafletLoading = null; reject(new Error('map library failed to load')); };
+      document.head.appendChild(js);
+    }));
+  }
+  function initMap() {
+    var el = document.getElementById('map');
+    map = L.map(el, { zoomSnap: 0.5 });
+    var osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' });
+    var sectional = L.tileLayer('https://tiles.arcgis.com/tiles/ssFJjBXIUyZDrSYZ/arcgis/rest/services/VFR_Sectional/MapServer/tile/{z}/{y}/{x}',
+      { maxZoom: 16, maxNativeZoom: 12, attribution: 'FAA Aeronautical Information Services' });
+    osm.addTo(map);
+    mapLayers = { grid: L.layerGroup(), airspace: L.layerGroup(), restricted: L.layerGroup(), tfr: L.layerGroup(), stations: L.layerGroup(), stadiums: L.layerGroup(), center: L.layerGroup() };
+    ['grid', 'airspace', 'restricted', 'tfr', 'stations', 'stadiums', 'center'].forEach(function (k) { mapLayers[k].addTo(map); });
+    L.control.layers({ 'Street map': osm, 'FAA VFR sectional': sectional }, {
+      'LAANC grid': mapLayers.grid, 'Controlled airspace': mapLayers.airspace, 'Restricted areas': mapLayers.restricted,
+      'TFRs': mapLayers.tfr, 'METAR stations': mapLayers.stations, 'Stadiums': mapLayers.stadiums,
+    }, { collapsed: true }).addTo(map);
+    L.control.scale({ imperial: true, metric: false }).addTo(map);
+    // Ceiling numbers once a facility map cell (1/120 degree) is tall enough on screen to hold one.
+    function labels() {
+      var c = map.getCenter(), a = map.latLngToContainerPoint(c), b = map.latLngToContainerPoint([c.lat + 1 / 120, c.lng]);
+      el.classList.toggle('labels', Math.abs(a.y - b.y) >= 30);
+    }
+    map.on('zoomend', labels);
+    drawMap(true);
+    labels();
+  }
+  function tip(layer, text) { layer.bindTooltip(text, { sticky: true }); return layer; }
+  function drawMap(fit) {
+    var d = state.data;
+    if (!map || !d || !d.config || !d.config.center) return;
+    Object.keys(mapLayers).forEach(function (k) { mapLayers[k].clearLayers(); });
+    var c = d.config.center, here = [c.lat, c.lon], NM = 1852;
+    var a = d.airspace, m = a && a.map;
+    if (m) {
+      m.cells.forEach(function (x) {
+        var col = ceilColor(x[4]), r = L.rectangle([[x[0], x[1]], [x[2], x[3]]], { color: col, weight: 0.5, fillColor: col, fillOpacity: 0.28, interactive: false });
+        r.bindTooltip(String(x[4]), { permanent: true, direction: 'center', className: 'ceil' });
+        mapLayers.grid.addLayer(r);
+      });
+      m.classes.forEach(function (x) {
+        var st = CLASS_STYLE[x.cls] || CLASS_STYLE.E;
+        mapLayers.airspace.addLayer(tip(L.polygon(x.rings, { color: st.color, dashArray: st.dashArray, weight: x.surface ? 2.5 : 1.2, fill: false }),
+          x.name + ' · floor ' + (x.floor || '?')));
+      });
+      m.areas.forEach(function (x) {
+        var hard = ['P', 'R', 'NSUFR', 'NDA', 'DC'].indexOf(x.kind) >= 0;
+        var st = hard ? { color: '#d10000', weight: 2, fillColor: '#d10000', fillOpacity: x.kind === 'DC' ? 0.04 : 0.25 } : { color: '#777', weight: 1, dashArray: '4 4', fillOpacity: 0.05 };
+        var shape = x.circle ? L.circle(x.circle.center, Object.assign({ radius: x.circle.rNm * NM }, st)) : L.polygon(x.rings, st);
+        mapLayers.restricted.addLayer(tip(shape, x.name));
+      });
+      m.stadiums.forEach(function (s) {
+        mapLayers.stadiums.addLayer(tip(L.circle([s.lat, s.lon], { radius: 3 * NM, color: '#7a00b5', weight: 1, dashArray: '3 5', fill: false }), s.name + ' · 3 NM event TFR'));
+        mapLayers.stadiums.addLayer(tip(L.circleMarker([s.lat, s.lon], { radius: 5, color: '#7a00b5', fillColor: '#7a00b5', fillOpacity: 1 }), s.name));
+      });
+    }
+    ((d.tfrs && d.tfrs.local) || []).forEach(function (t) {
+      (t.shapes || []).forEach(function (s) {
+        var st = { color: '#ff0000', weight: 2, fillColor: '#ff0000', fillOpacity: 0.18 };
+        var shape = s.type === 'circle' ? L.circle(s.center, Object.assign({ radius: s.rNm * NM }, st)) : L.polygon(s.ring, st);
+        mapLayers.tfr.addLayer(tip(shape, 'TFR ' + t.id + ' ' + (t.type || '')));
+      });
+    });
+    (d.metars || []).forEach(function (s) {
+      if (s.lat == null || s.lon == null) return;
+      mapLayers.stations.addLayer(L.circleMarker([s.lat, s.lon], { radius: 6, color: '#000', weight: 1, fillColor: '#fff', fillOpacity: 1 })
+        .bindTooltip(s.station, { permanent: true, direction: 'right', offset: [6, 0] }));
+    });
+    var radius = d.config.tfrRadiusNm;
+    if (radius) mapLayers.center.addLayer(tip(L.circle(here, { radius: radius * NM, color: '#555', weight: 1.5, dashArray: '8 6', fill: false, interactive: true }), 'TFR search radius ' + radius + ' NM'));
+    mapLayers.center.addLayer(tip(L.circleMarker(here, { radius: 8, color: '#fff', weight: 3, fillColor: '#0057ff', fillOpacity: 1 }), c.label || 'Location'));
+    if (fit) map.fitBounds(L.latLng(here).toBounds(((a && a.radiusNm) || 3) * 2 * NM));
+  }
+  function openMap() {
+    loadLeaflet().then(function () { if (!map) initMap(); else { map.invalidateSize(); drawMap(false); } })
+      .catch(function (e) { document.getElementById('map').textContent = 'Map unavailable: ' + e.message; });
+  }
+  var mapDetails = document.querySelector('#s-map details');
+  try { if (localStorage.getItem('mapOpen') === '1') mapDetails.open = true; } catch (e) { /* storage blocked */ }
+  mapDetails.addEventListener('toggle', function () {
+    try { localStorage.setItem('mapOpen', mapDetails.open ? '1' : '0'); } catch (e) { /* storage blocked */ }
+    if (mapDetails.open && state.data) openMap();
+  });
+
   function renderSources() {
     var d = state.data, b = body('s-sources');
-    var names = { tfr: 'FAA TFR list', metar: 'METAR', taf: 'TAF', nws_points: 'NWS point', nws_hourly: 'NWS hourly', nws_grid: 'NWS gusts', nws_alerts: 'NWS alerts', kp: 'SWPC Kp' };
+    var names = { airspace: 'FAA airspace', tfr: 'FAA TFR list', metar: 'METAR', taf: 'TAF', nws_points: 'NWS point', nws_hourly: 'NWS hourly', nws_grid: 'NWS gusts', nws_alerts: 'NWS alerts', kp: 'SWPC Kp' };
     Object.keys(d.sources || {}).forEach(function (k) {
       var s = d.sources[k];
       append(b, h('div', null, s.ok ? '✅ ' : '❌ ', h('strong', { text: names[k] || k }), s.ok ? '' : ' — ' + s.error));
@@ -294,6 +430,7 @@
   // Which overall-banner reasons and data sources belong to each collapsible card.
   var CARDS = {
     's-tfr': ['tfr'],
+    's-air': ['airspace'],
     's-metar': ['metar'],
     's-fcst': ['forecast', 'nws_points', 'nws_hourly', 'taf'],
     's-alerts': ['nws_alerts'],
@@ -335,9 +472,10 @@
     renderPlace();
     if (!state.data) return;
     if (state.data.nws && state.data.nws.forecastUrl) document.getElementById('nws-link').href = state.data.nws.forecastUrl;
-    [renderTfr, renderMetar, renderForecast, renderAlerts, renderSky, renderSources].forEach(function (fn) {
+    [renderTfr, renderAirspace, renderMetar, renderForecast, renderAlerts, renderSky, renderSources].forEach(function (fn) {
       try { fn(); } catch (e) { console.error(e); }
     });
+    if (mapDetails.open) { if (map) drawMap(false); else openMap(); }
   }
 
   // ------------------------------------------------------------ loading

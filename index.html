@@ -100,6 +100,17 @@ footer { font-size: .85rem; color: var(--muted); margin-top: 16px; border-top: 1
 #geo-btn { margin-top: 10px; width: 100%; font-weight: 700; }
 #place button { font-size: inherit; min-height: 0; padding: 0; border: 0; background: none; color: var(--link); text-decoration: underline; cursor: pointer; }
 body.landing #banner, body.landing #place, body.landing section.card, body.landing #s-sources { display: none; }
+/* Map: legend swatches match the layer styles in app.js. */
+#map { height: 380px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); }
+#map .leaflet-tooltip.ceil { background: none; border: 0; box-shadow: none; padding: 0; font: 700 11px/1 system-ui, sans-serif; color: #000; text-shadow: 0 0 2px #fff, 0 0 2px #fff; }
+#map .leaflet-tooltip.ceil::before { display: none; }
+#map:not(.labels) .leaflet-tooltip.ceil { display: none; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; font-size: .78rem; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { display: inline-block; width: 16px; height: 11px; border-radius: 2px; border: 2px solid transparent; }
+.sw-0 { background: #d1000055; } .sw-100 { background: #ff7a0055; } .sw-200 { background: #ffc40066; } .sw-300 { background: #7bc04366; } .sw-400 { background: #0b8a3a55; }
+.sw-b { border-color: #1f5fd1 !important; } .sw-c { border-color: #b000b0 !important; } .sw-d { border: 2px dashed #1f5fd1 !important; } .sw-e { border: 2px dashed #b000b0 !important; }
+.sw-x { background: #d1000040; border-color: #d10000 !important; } .sw-t { background: #ff000030; border-color: #ff0000 !important; }
 #sample { background: #7a00b5; color: #fff; font-weight: 900; text-align: center; padding: 4px; border-radius: 6px; margin-top: 8px; }
 @media (max-width: 420px) { body { font-size: 18px; } #banner .lvl { font-size: 2rem; } .links { grid-template-columns: 1fr; } }
 </style>
@@ -128,7 +139,17 @@ body.landing #banner, body.landing #place, body.landing section.card, body.landi
     <noscript><div class="stale">JavaScript is required. Check official FAA/NWS sources.</div></noscript>
   </div>
 
+  <section id="s-map" class="card"><details><summary><h2>Map</h2></summary><div class="body">
+    <div id="map" role="img" aria-label="Map of the location, LAANC grid, airspace, restrictions and TFRs"></div>
+    <div class="legend small">
+      <span><i class="sw-0"></i>0 ft</span><span><i class="sw-100"></i>50–100</span><span><i class="sw-200"></i>150–200</span><span><i class="sw-300"></i>250–300</span><span><i class="sw-400"></i>350–400 ft LAANC</span>
+      <span><i class="sw-b"></i>Class B</span><span><i class="sw-c"></i>C</span><span><i class="sw-d"></i>D</span><span><i class="sw-e"></i>E to surface</span>
+      <span><i class="sw-x"></i>Prohibited / restricted / 99.7</span><span><i class="sw-t"></i>TFR</span>
+    </div>
+    <div class="small muted">LAANC numbers appear when zoomed in. Use the layer button to switch to the FAA VFR sectional.</div>
+  </div></details></section>
   <section id="s-tfr" class="card"><details><summary><h2>TFRs</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
+  <section id="s-air" class="card"><details><summary><h2>Airspace &amp; LAANC</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
   <section id="s-metar" class="card"><details><summary><h2>Current conditions (METAR)</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
   <section id="s-fcst" class="card"><details><summary><h2>Next 6 hours</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
   <section id="s-alerts" class="card"><details><summary><h2>NWS alerts</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
@@ -137,6 +158,8 @@ body.landing #banner, body.landing #place, body.landing section.card, body.landi
     <div class="links">
       <a href="https://tfr.faa.gov/tfr3/?page=map" target="_blank" rel="noopener">FAA TFR map</a>
       <a href="https://www.faa.gov/uas/getting_started/b4ufly" target="_blank" rel="noopener">B4UFLY</a>
+      <a href="https://faa.maps.arcgis.com/apps/webappviewer/index.html?id=9c2e4406710048e19806ebf6a06754ad" target="_blank" rel="noopener">FAA UAS Facility Map</a>
+      <a href="https://faadronezone-access.faa.gov/" target="_blank" rel="noopener">FAADroneZone</a>
       <a href="https://aviationweather.gov/" target="_blank" rel="noopener">aviationweather.gov</a>
       <a id="nws-link" href="https://forecast.weather.gov/" target="_blank" rel="noopener">NWS forecast</a>
     </div>
@@ -145,7 +168,7 @@ body.landing #banner, body.landing #place, body.landing section.card, body.landi
 
   <footer>
     Situational awareness aid only. The remote pilot in command remains responsible for the preflight assessment under 14 CFR 107.49 and for checking official FAA sources.
-    <br>ZIP locations from <a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a> (CC BY 4.0).
+    <br>ZIP locations from <a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a> (CC BY 4.0). Airspace from the FAA UAS Data Delivery System. Map: <a href="https://leafletjs.com/" target="_blank" rel="noopener">Leaflet</a>, © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors, FAA sectional charts.
   </footer>
 </main>
 <script src="suncalc.js"></script>

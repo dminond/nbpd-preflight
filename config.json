@@ -4,6 +4,7 @@
   "center": { "lat": 40.4862, "lon": -74.4518, "label": "New Brunswick, NJ" },
   "timeZone": "America/New_York",
   "tfrRadiusNm": 8,
+  "airspaceRadiusNm": 3,
   "tfrStates": ["NJ", "NY", "PA"],
   "stations": ["KSMQ", "KEWR", "KTTN"],
   "tafStations": ["KEWR", "KTTN"],
@@ -25,6 +26,7 @@
     "precipPct":     { "caution": 30 },
     "kp":            { "caution": 4,    "nogo": 5 },
     "tfrNm":         { "nogo": 5 },
+    "airspace":      { "controlledLevel": 1, "zeroCeilingLevel": 2, "nearNm": 0.5, "stadiumLevel": 0 },
     "metarMaxAgeMin": 90
   }
 }

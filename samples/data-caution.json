@@ -6,18 +6,26 @@
  },
  "config": {
   "name": "NBPD UAS Pre-Flight",
+  "zip": null,
+  "nearZip": null,
   "center": {
    "lat": 40.4862,
    "lon": -74.4518,
    "label": "New Brunswick, NJ"
   },
   "timeZone": "America/New_York",
-  "tfrRadiusNm": 30,
+  "tfrRadiusNm": 8,
+  "tfrStates": [
+   "NJ",
+   "NY",
+   "PA"
+  ],
   "stations": [
    "KSMQ",
    "KEWR",
    "KTTN"
   ],
+  "stationSearchNm": null,
   "staleMinutes": 30,
   "thresholds": {
    "windKt": {
@@ -46,6 +54,12 @@
    "tfrNm": {
     "nogo": 5
    },
+   "airspace": {
+    "controlledLevel": 1,
+    "zeroCeilingLevel": 2,
+    "nearNm": 0.5,
+    "stadiumLevel": 0
+   },
    "metarMaxAgeMin": 90
   }
  },
@@ -57,11 +71,6 @@
     "level": 1,
     "source": "tfr",
     "text": "TFR 6/3333 5.6 NM NE"
-   },
-   {
-    "level": 1,
-    "source": "tfr",
-    "text": "TFR 6/4321 8.3 NM W"
    },
    {
     "level": 1,
@@ -91,29 +100,33 @@
   ]
  },
  "sources": {
-  "nws_points": {
-   "ok": true,
-   "ms": 2
-  },
   "metar": {
    "ok": true,
-   "ms": 3
+   "ms": 6
   },
   "nws_alerts": {
    "ok": true,
-   "ms": 3
+   "ms": 7
   },
   "kp": {
    "ok": true,
-   "ms": 3
+   "ms": 7
   },
-  "tfr": {
+  "nws_points": {
    "ok": true,
-   "ms": 31
+   "ms": 7
+  },
+  "airspace": {
+   "ok": true,
+   "ms": 7
   },
   "taf": {
    "ok": true,
-   "ms": 27
+   "ms": 2
+  },
+  "tfr": {
+   "ok": true,
+   "ms": 32
   },
   "nws_hourly": {
    "ok": true,
@@ -143,29 +156,18 @@
     "distanceNm": 5.6,
     "bearingDeg": 55,
     "inside": false,
+    "shapes": [
+     {
+      "type": "circle",
+      "center": [
+       40.55,
+       -74.33333
+      ],
+      "rNm": 1
+     }
+    ],
     "compass": "NE",
     "centerDistanceNm": 6.6,
-    "level": 1
-   },
-   {
-    "id": "6/4321",
-    "type": "HAZARDS",
-    "facility": "ZNY",
-    "state": "NJ",
-    "description": "Hillsborough, NJ, Thursday, October 15, 2026 through Friday, October 16, 2026 UTC",
-    "created": "10/14/2026",
-    "detailUrl": "https://tfr.faa.gov/tfr3/?page=detail_6_4321",
-    "altitudes": [
-     "SFC – 2,500 FT MSL"
-    ],
-    "effective": "2026-10-15T12:00:00.000Z",
-    "expires": "2026-10-16T23:59:00.000Z",
-    "title": "Hillsborough, NJ wildfire suppression & aerial operations",
-    "distanceNm": 8.3,
-    "bearingDeg": 275,
-    "inside": false,
-    "compass": "W",
-    "centerDistanceNm": 9.5,
     "level": 1
    },
    {
@@ -198,6 +200,7 @@
     "distanceNm": null,
     "bearingDeg": null,
     "inside": false,
+    "shapes": [],
     "distanceUnknown": true,
     "note": "distance unknown — check FAA (geometry not parsed)",
     "level": 1
@@ -224,6 +227,178 @@
    }
   ],
   "checked": 5
+ },
+ "airspace": {
+  "radiusNm": 3,
+  "groundElevFt": 79,
+  "point": {
+   "controlled": false,
+   "cls": "G",
+   "eFloorAgl": null
+  },
+  "nearestControlled": {
+   "cls": "D",
+   "name": "SOMERSET CLASS D",
+   "distanceNm": 0.8,
+   "compass": "N"
+  },
+  "overhead": [
+   {
+    "cls": "B",
+    "name": "NEW YORK CLASS B",
+    "floor": "3,000 ft MSL",
+    "floorAgl": 2921
+   }
+  ],
+  "restrictions": [
+   {
+    "kind": "NSUFR",
+    "label": "national security UAS flight restriction",
+    "name": "Raritan Arsenal",
+    "inside": false,
+    "distanceNm": 0.9,
+    "compass": "SE",
+    "floor": "Surface",
+    "ceiling": "400' AGL",
+    "note": "14 CFR 99.7"
+   }
+  ],
+  "other": [],
+  "stadiums": [
+   {
+    "name": "SHI Stadium",
+    "city": "Piscataway",
+    "distanceNm": 1.7,
+    "compass": "NNW",
+    "status": "Open"
+   }
+  ],
+  "mapEffective": "10/1/2026",
+  "level": 0,
+  "map": {
+   "cells": [
+    [
+     40.5,
+     -74.46,
+     40.50833,
+     -74.45167,
+     0
+    ],
+    [
+     40.5,
+     -74.45,
+     40.50833,
+     -74.44167,
+     100
+    ],
+    [
+     40.5083,
+     -74.46,
+     40.51663,
+     -74.45167,
+     200
+    ]
+   ],
+   "classes": [
+    {
+     "cls": "D",
+     "name": "SOMERSET CLASS D",
+     "floor": "SFC",
+     "surface": true,
+     "rings": [
+      [
+       [
+        40.5,
+        -74.47
+       ],
+       [
+        40.54,
+        -74.47
+       ],
+       [
+        40.54,
+        -74.43
+       ],
+       [
+        40.5,
+        -74.43
+       ],
+       [
+        40.5,
+        -74.47
+       ]
+      ]
+     ]
+    },
+    {
+     "cls": "B",
+     "name": "NEW YORK CLASS B",
+     "floor": "3,000 ft MSL",
+     "surface": false,
+     "rings": [
+      [
+       [
+        40.3,
+        -74.7
+       ],
+       [
+        40.7,
+        -74.7
+       ],
+       [
+        40.7,
+        -74.2
+       ],
+       [
+        40.3,
+        -74.2
+       ],
+       [
+        40.3,
+        -74.7
+       ]
+      ]
+     ]
+    }
+   ],
+   "areas": [
+    {
+     "kind": "NSUFR",
+     "name": "Raritan Arsenal",
+     "rings": [
+      [
+       [
+        40.47,
+        -74.44
+       ],
+       [
+        40.475,
+        -74.44
+       ],
+       [
+        40.475,
+        -74.435
+       ],
+       [
+        40.47,
+        -74.435
+       ],
+       [
+        40.47,
+        -74.44
+       ]
+      ]
+     ]
+    }
+   ],
+   "stadiums": [
+    {
+     "name": "SHI Stadium",
+     "lat": 40.513,
+     "lon": -74.465
+    }
+   ]
+  }
  },
  "metars": [
   {

@@ -1,5 +1,9 @@
 {
  "properties": {
+  "elevation": {
+   "unitCode": "wmoUnit:m",
+   "value": 24.08
+  },
   "windGust": {
    "uom": "wmoUnit:km_h-1",
    "values": [

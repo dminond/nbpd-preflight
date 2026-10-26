@@ -40,7 +40,7 @@ jobs:
         run: |
           mkdir -p _site
           cp index.html app.js suncalc.js config.json data.json _site/
-          cp -r samples _site/
+          cp -r samples vendor _site/
 
       - uses: actions/configure-pages@v5
 

@@ -1,0 +1,49 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -74.48,
+       40.46
+      ],
+      [
+       -74.48,
+       40.51
+      ],
+      [
+       -74.42,
+       40.51
+      ],
+      [
+       -74.42,
+       40.46
+      ],
+      [
+       -74.48,
+       40.46
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "NAME": "SOMERSET CLASS D",
+    "IDENT": "SMQ",
+    "ICAO_ID": "KSMQ",
+    "CLASS": "D",
+    "LOCAL_TYPE": "CLASS_D",
+    "LOWER_VAL": 0,
+    "LOWER_UOM": "FT",
+    "LOWER_CODE": "SFC",
+    "UPPER_VAL": 2500,
+    "UPPER_UOM": "FT",
+    "UPPER_CODE": "MSL",
+    "WKHR_CODE": "H24"
+   }
+  }
+ ]
+}

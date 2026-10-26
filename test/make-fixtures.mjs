@@ -92,7 +92,7 @@ w('base', 'nws_hourly.json', { properties: { periods: winds.map((ws, i) => ({
   probabilityOfPrecipitation: { unitCode: 'wmoUnit:percent', value: pop[i] }, windSpeed: ws, windDirection: 'NW',
   shortForecast: pop[i] > 30 ? 'Chance Showers And Thunderstorms' : 'Partly Sunny' })) } });
 const gustsKmh = [33, 37, 41, 44, 39, 30, 24, 20, 18, 15];
-w('base', 'nws_grid.json', { properties: { windGust: { uom: 'wmoUnit:km_h-1', values: gustsKmh.map((v, i) => ({ validTime: `${iso(i)}/PT1H`, value: v })) } } });
+w('base', 'nws_grid.json', { properties: { elevation: { unitCode: 'wmoUnit:m', value: 24.08 }, windGust: { uom: 'wmoUnit:km_h-1', values: gustsKmh.map((v, i) => ({ validTime: `${iso(i)}/PT1H`, value: v })) } } });
 w('base', 'nws_alerts.json', { type: 'FeatureCollection', features: [
   { properties: { '@id': 'https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.sample1', status: 'Actual', messageType: 'Alert', event: 'Wind Advisory', severity: 'Moderate', urgency: 'Expected',
     headline: 'Wind Advisory issued October 15 at 11:02AM EDT until October 15 at 8:00PM EDT by NWS Mount Holly NJ',
@@ -117,4 +117,24 @@ w('nogo', 'tfr_list.json', [{ notam_id: '6/1234', type: 'VIP', facility: 'ZNY', 
 w('nogo', 'tfr_detail_6_1234.xml', tfrXml('6/1234', 'VIP', 'Bedminster, NJ VIP movement', '2026-10-15T18:45:00', '2026-10-18T22:00:00', ['0', 'HEI'], ['17999', 'ALT'], [
   { lat: '403900N', lon: '0743800W', clat: '403900N', clon: '0743800W', r: '10', t: 'CIR' },
 ]));
+// ---- FAA airspace layers (ArcGIS GeoJSON query responses), around 40.4862, -74.4518.
+const fc = features => ({ type: 'FeatureCollection', features });
+const box = (s, w, n, e) => ({ type: 'Polygon', coordinates: [[[w, s], [w, n], [e, n], [e, s], [w, s]]] });
+const poly = (geometry, properties) => ({ type: 'Feature', geometry, properties });
+const classD = { NAME: 'SOMERSET CLASS D', IDENT: 'SMQ', ICAO_ID: 'KSMQ', CLASS: 'D', LOCAL_TYPE: 'CLASS_D', LOWER_VAL: 0, LOWER_UOM: 'FT', LOWER_CODE: 'SFC', UPPER_VAL: 2500, UPPER_UOM: 'FT', UPPER_CODE: 'MSL', WKHR_CODE: 'H24' };
+const cell = (s, w, ceiling) => poly(box(s, w, s + 1 / 120, w + 1 / 120), { CEILING: ceiling, MAP_EFF: '10/1/2026', APT1_ICAO: 'KSMQ', APT1_NAME: 'Somerset', APT1_LAANC: 1, AIRSPACE_1: 'D' });
+// Base: Class G here; a Class D 0.8 NM north with its facility map grid, a 99.7 area 0.9 NM SE, a stadium 1.7 NM NNW.
+w('base', 'airspace_uasfm.json', fc([cell(40.5, -74.46, 0), cell(40.5, -74.45, 100), cell(40.5083, -74.46, 200)]));
+w('base', 'airspace_classes.json', fc([
+  poly(box(40.5, -74.47, 40.54, -74.43), classD),
+  poly(box(40.3, -74.7, 40.7, -74.2), { ...classD, NAME: 'NEW YORK CLASS B', IDENT: 'JFK', ICAO_ID: 'KJFK', CLASS: 'B', LOCAL_TYPE: 'CLASS_B', LOWER_VAL: 3000, LOWER_CODE: 'MSL', UPPER_VAL: 7000 }),
+]));
+w('base', 'airspace_sua.json', fc([]));
+w('base', 'airspace_nsufr.json', fc([poly(box(40.47, -74.44, 40.475, -74.435), { Facility: 'Raritan Arsenal', Base: 'Raritan', Floor: 'Surface', Ceiling: "400' AGL" })]));
+w('base', 'airspace_nsufrPartTime.json', fc([]));
+w('base', 'airspace_nda.json', fc([]));
+w('base', 'airspace_stadiums.json', fc([{ type: 'Feature', geometry: { type: 'Point', coordinates: [-74.465, 40.513] }, properties: { NAME: 'SHI Stadium', CITY: 'Piscataway', STATE: 'NJ', STATUS_CODE: 'Open' } }]));
+// No-go: inside the Class D, on a 0 ft facility map cell.
+w('nogo', 'airspace_classes.json', fc([poly(box(40.46, -74.48, 40.51, -74.42), classD)]));
+w('nogo', 'airspace_uasfm.json', fc([cell(40.4833, -74.4583, 0)]));
 console.log('fixtures written');
