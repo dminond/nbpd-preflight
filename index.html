@@ -7,9 +7,7 @@
 <meta name="robots" content="noindex">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#000000">
-<link rel="icon" href="favicon.ico" sizes="any">
-<link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="icon" href="data:,">
 <style>
 :root {
   --bg: #000; --fg: #fff; --muted: #c8c8c8; --card: #111; --line: #3a3a3a; --link: #7cc4ff;
@@ -47,6 +45,14 @@ button { font: inherit; font-size: .85rem; color: var(--fg); background: var(--c
 .lv-1 { background: var(--caution); color: var(--caution-fg); }
 .lv-2 { background: var(--nogo); color: var(--nogo-fg); }
 .lv-x { background: var(--info); color: var(--info-fg); border-color: var(--nogo) !important; }
+/* Loading: neutral border, pulsing label, and a thin sliding bar (also shown briefly on each refresh). */
+#banner.loading { border-color: var(--line) !important; }
+#banner.loading .lvl { animation: pulse 1.6s ease-in-out infinite; }
+#banner .bar { position: relative; height: 4px; margin-top: 10px; border-radius: 2px; overflow: hidden; background: color-mix(in srgb, currentColor 15%, transparent); }
+#banner .bar::before { content: ''; position: absolute; top: 0; bottom: 0; width: 35%; border-radius: 2px; background: currentColor; opacity: .55; animation: slide 1.4s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .45; } }
+@keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
+@media (prefers-reduced-motion: reduce) { #banner.loading .lvl, #banner .bar::before { animation: none; } #banner .bar::before { width: 100%; opacity: .3; } }
 #banner.lv-1 a, #banner.lv-1 { --link: #000; }
 
 section { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin: 0 0 12px; }
@@ -112,9 +118,10 @@ body.landing #banner, body.landing #place, body.landing section.card, body.landi
     </form>
   </section>
 
-  <div id="banner" class="lv-x" role="status" aria-live="polite">
+  <div id="banner" class="lv-x loading" role="status" aria-live="polite">
     <div class="lvl">LOADING…</div>
-    <div class="asof">Fetching data</div>
+    <div class="asof">Checking FAA TFRs, METAR/TAF, NWS and Kp</div>
+    <div class="bar"></div>
     <noscript><div class="stale">JavaScript is required. Check official FAA/NWS sources.</div></noscript>
   </div>
 

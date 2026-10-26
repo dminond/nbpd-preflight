@@ -5,7 +5,7 @@
   'use strict';
   var POLL_MS = 5 * 60 * 1000, TICK_MS = 30 * 1000;
   var LEVELS = ['GO', 'CAUTION', 'NO-GO REVIEW'];
-  var state = { data: null, config: null, loadedAt: 0, lastError: null };
+  var state = { data: null, config: null, loadedAt: 0, lastError: null, loading: false, loadStart: 0 };
 
   // ?data=samples/data-stale.json (or data.json from a local fetch) previews a file;
   // otherwise /08901 loads that ZIP and / shows the ZIP form.
@@ -78,6 +78,16 @@
     var b = document.getElementById('banner');
     b.textContent = '';
     var d = state.data;
+    if (!d && state.loading) {
+      // A location's first check runs every source live (CDN cache miss) and can take a while.
+      var secs = Math.round((Date.now() - state.loadStart) / 1000);
+      b.className = 'lv-x loading';
+      append(b, [h('div', { class: 'lvl', text: 'LOADING…' }),
+        h('div', { class: 'asof', text: 'Checking FAA TFRs, METAR/TAF, NWS and Kp' }),
+        secs >= 5 ? h('div', { class: 'small', text: secs + ' s · the first check for a location can take up to 30 s' }) : null,
+        h('div', { class: 'bar' })]);
+      return;
+    }
     if (!d) {
       b.className = 'lv-x';
       append(b, [h('div', { class: 'lvl', text: 'NO DATA' }),
@@ -102,6 +112,7 @@
       if (reasons.length > 8) append(ul, h('li', { text: '+' + (reasons.length - 8) + ' more below' }));
       append(b, ul);
     }
+    if (state.loading) append(b, h('div', { class: 'bar', title: 'Refreshing' }));
     document.getElementById('sample').hidden = !d.sample;
   }
 
@@ -331,7 +342,10 @@
     });
   }
   function load() {
-    if (!dataUrl) return;
+    if (!dataUrl || state.loading) return;
+    state.loading = true; state.loadStart = Date.now();
+    renderBanner();
+    var tick = state.data ? null : setInterval(renderBanner, 1000);
     return getJSON(dataUrl).then(function (d) {
       if (!d || !d.generated_at) throw new Error('invalid data file');
       state.data = d; state.loadedAt = Date.now(); state.lastError = null;
@@ -339,7 +353,10 @@
     }).catch(function (e) {
       if (e.status === 404 && zip && !p) { dataUrl = null; showZipEntry('ZIP ' + zip + ' was not found. Check the number, or try a nearby ZIP.'); return; }
       state.lastError = e.message || String(e); // keep showing the previous data; it will go stale
-    }).then(function () { if (dataUrl) render(); });
+    }).then(function () {
+      state.loading = false; clearInterval(tick);
+      if (dataUrl) render();
+    });
   }
 
   // ------------------------------------------------------------ ZIP form

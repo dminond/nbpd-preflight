@@ -151,6 +151,5 @@ scripts/fetch.mjs                fetch + filter + thresholds -> data.json
 .github/workflows/refresh.yml    cron every 10 min + manual run -> GitHub Pages
 api/data.mjs  vercel.json         Vercel: /NNNNN routing, on-demand data per ZIP behind the CDN cache
 scripts/location.mjs  data/zips.json  ZIP -> location config; scripts/build-zips.mjs rebuilds the data
-assets/  favicon.ico              NBPD patch: favicon, home-screen icon, header mark
 samples/  test/                  sample data.json files, fixtures, tests
 ```
