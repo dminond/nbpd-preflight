@@ -1,5 +1,5 @@
 {
-  "name": "NBPD UAS Pre-Flight",
+  "name": "DFR Preflight",
   "center": { "lat": 40.4862, "lon": -74.4518, "label": "New Brunswick, NJ" },
   "timeZone": "America/New_York",
   "tfrRadiusNm": 8,

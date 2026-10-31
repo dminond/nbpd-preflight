@@ -327,7 +327,7 @@
   });
 
   getJSON('config.json').then(function (c) { state.config = c; }).catch(function () {}).then(function () {
-    if (state.config && state.config.name) document.getElementById('title').textContent = state.config.name;
+    if (state.config && state.config.name) { document.getElementById('title').textContent = state.config.name; document.title = state.config.name; }
   });
   load();
   setInterval(load, POLL_MS);

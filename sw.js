@@ -4,9 +4,9 @@
 // marked with an X-From-Cache header so the page can say it is offline; its age
 // still comes from generated_at, so DATA STALE appears exactly as it would online.
 'use strict';
-var CACHE = 'nbpd-preflight-v1';
+var CACHE = 'nbpd-preflight-v2';
 var SHELL = ['./', 'index.html', 'app.js', 'suncalc.js', 'config.json', 'manifest.webmanifest',
-  'favicon.ico', 'assets/favicon-32.png', 'assets/patch-96.png', 'assets/apple-touch-icon.png',
+  'favicon.ico', 'assets/favicon-32.png', 'assets/header-mark.png', 'assets/apple-touch-icon.png',
   'assets/icon-192.png', 'assets/icon-512.png'];
 
 self.addEventListener('install', function (e) {

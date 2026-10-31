@@ -132,6 +132,6 @@ manifest.webmanifest  sw.js      PWA manifest and offline-fallback service worke
 config.json                      hand-edited settings
 scripts/fetch.mjs                fetch + filter + thresholds -> data.json
 .github/workflows/refresh.yml    cron every 10 min + manual run -> GitHub Pages
-assets/  favicon.ico              app icons and favicon (scripts/make-icons.py), NBPD patch header mark
+assets/  favicon.ico              app icons, favicon and header mark (scripts/make-icons.py)
 samples/  test/                  sample data.json files, fixtures, tests
 ```

@@ -46,3 +46,7 @@ make(192,0.80,path='assets/icon-maskable-192.png')
 fav=[make(s,1.0,text=False) for s in (16,32,48)]
 fav[1].save('assets/favicon-32.png', optimize=True)
 make(48,1.0,text=False).save('favicon.ico', sizes=[(16,16),(32,32),(48,48)])
+# Header mark beside the page title: drone-only, rounded corners, 2x for sharp display at 40 px.
+hm = make(80, 1.0, text=False).convert('RGBA')
+mask = Image.new('L', (80, 80), 0); ImageDraw.Draw(mask).rounded_rectangle([0, 0, 79, 79], radius=18, fill=255)
+hm.putalpha(mask); hm.save('assets/header-mark.png', optimize=True)

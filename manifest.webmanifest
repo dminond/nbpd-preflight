@@ -1,7 +1,7 @@
 {
-  "name": "NBPD UAS Pre-Flight",
+  "name": "DFR Preflight",
   "short_name": "DFR Preflight",
-  "description": "Pre-flight situational awareness for NBPD drone pilots: TFRs, METAR/TAF, NWS forecast and alerts, Kp, daylight.",
+  "description": "Pre-flight situational awareness for drone-as-first-responder pilots: TFRs, METAR/TAF, NWS forecast and alerts, Kp, daylight.",
   "id": "./",
   "start_url": "./",
   "scope": "./",
