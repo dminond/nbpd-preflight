@@ -10,6 +10,11 @@
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="UAS Preflight">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <style>
 :root {
   --bg: #000; --fg: #fff; --muted: #c8c8c8; --card: #111; --line: #3a3a3a; --link: #7cc4ff;
@@ -25,13 +30,14 @@ html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; background: var(--bg); color: var(--fg);
   font: 19px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  padding: 0 max(12px, env(safe-area-inset-right)) 32px max(12px, env(safe-area-inset-left));
+  padding: env(safe-area-inset-top) max(12px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
 }
 main { max-width: 760px; margin: 0 auto; }
 a { color: var(--link); }
 h1 { font-size: 1rem; font-weight: 600; margin: 10px 0 6px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .brand { display: flex; align-items: center; gap: 10px; }
 .brand img { flex: none; display: block; }
+.actions { display: flex; gap: 6px; flex: none; }
 h2 { font-size: 1.15rem; margin: 0 0 8px; }
 .mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .85rem; word-break: break-word; white-space: pre-wrap; }
 .muted { color: var(--muted); }
@@ -94,7 +100,7 @@ footer { font-size: .85rem; color: var(--muted); margin-top: 16px; border-top: 1
 <body>
 <main>
   <div id="sample" hidden>SAMPLE DATA — NOT LIVE</div>
-  <h1><span class="brand"><img src="assets/patch-96.png" width="32" height="40" alt="New Brunswick Police patch"><span id="title">NBPD UAS Pre-Flight</span></span><button id="theme" type="button" aria-label="Toggle light/dark">Light/Dark</button></h1>
+  <h1><span class="brand"><img src="assets/patch-96.png" width="32" height="40" alt="New Brunswick Police patch"><span id="title">NBPD UAS Pre-Flight</span></span><span class="actions"><button id="refresh" type="button">Refresh</button> <button id="theme" type="button" aria-label="Toggle light/dark">Light/Dark</button></span></h1>
 
   <div id="banner" class="lv-x" role="status" aria-live="polite">
     <div class="lvl">LOADING…</div>

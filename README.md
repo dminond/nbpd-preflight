@@ -62,6 +62,17 @@ How the thresholds are applied:
 
 Each information card (TFRs, METAR, Next 6 hours, NWS alerts, Kp & daylight) starts collapsed. It shows only its title and what it contributes to the banner: GO, CAUTION, NO-GO REVIEW, or UNAVAILABLE when that card's source failed. Tap a card to open it. Cards stay open across the 5-minute refreshes. The official-source links are always shown.
 
+## Installing on a phone
+
+The page is a Progressive Web App, so it can be added to the home screen and opens full-screen like an app.
+
+- **iPhone (Safari):** open the page, tap **Share → Add to Home Screen**.
+- **Android (Chrome):** open the page, tap **⋮ → Install app** (or accept the install prompt).
+
+Use the **Refresh** button at the top to reload data; installed apps have no browser reload. The page also refreshes every 5 minutes, when it comes back to the foreground, and when the phone reconnects.
+
+**Offline behaviour.** `sw.js` fetches everything from the network first and falls back to the last saved copy only when there is no connection. When it uses a saved `data.json`, the banner says *Last refresh failed: offline, showing last saved copy*. The data age still comes from `generated_at`, so DATA STALE appears after 30 minutes just as it does online. The installed app never shows saved data as current.
+
 ## Data sources (all keyless)
 
 | Source | Endpoint |
@@ -117,9 +128,10 @@ The fixtures in `test/fixtures/` are synthetic. They follow each API's response 
 
 ```
 index.html  app.js  suncalc.js   page (vanilla JS/CSS, no build, no CDN)
+manifest.webmanifest  sw.js      PWA manifest and offline-fallback service worker
 config.json                      hand-edited settings
 scripts/fetch.mjs                fetch + filter + thresholds -> data.json
 .github/workflows/refresh.yml    cron every 10 min + manual run -> GitHub Pages
-assets/  favicon.ico              NBPD patch: favicon, home-screen icon, header mark
+assets/  favicon.ico              NBPD patch: favicon, home-screen/app icons, header mark
 samples/  test/                  sample data.json files, fixtures, tests
 ```

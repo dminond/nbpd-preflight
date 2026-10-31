@@ -302,13 +302,16 @@
   function getJSON(url) {
     return fetch(url + (url.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now(), { cache: 'no-store' }).then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
+      var cached = r.headers.get('X-From-Cache') === '1'; // served by sw.js while offline
+      return r.json().then(function (j) { if (j && typeof j === 'object') Object.defineProperty(j, '_fromCache', { value: cached }); return j; });
     });
   }
   function load() {
     return getJSON(dataUrl).then(function (d) {
       if (!d || !d.generated_at) throw new Error('invalid data file');
-      state.data = d; state.loadedAt = Date.now(); state.lastError = null;
+      // An offline copy keeps its original generated_at, so the age and DATA STALE stay correct.
+      if (d._fromCache && state.data && state.data.generated_at === d.generated_at) { state.lastError = 'offline, showing last saved copy'; return; }
+      state.data = d; state.loadedAt = Date.now(); state.lastError = d._fromCache ? 'offline, showing last saved copy' : null;
     }).catch(function (e) {
       state.lastError = e.message || String(e); // keep showing the previous data; it will go stale
     }).then(render);
@@ -332,5 +335,10 @@
     renderBanner();
     if (state.data) try { renderTfr(); } catch (e) { console.error(e); }
   }, TICK_MS);
+  document.getElementById('refresh').addEventListener('click', load); // no pull-to-refresh when installed
+  window.addEventListener('online', load);
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    navigator.serviceWorker.register('sw.js').catch(function (e) { console.warn('service worker not registered', e); });
+  }
   document.addEventListener('visibilitychange', function () { if (!document.hidden && Date.now() - state.loadedAt > 60000) load(); });
 })();
