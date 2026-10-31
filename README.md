@@ -17,6 +17,36 @@ The workflow never commits to the repository. Each run builds a new Pages deploy
 
 Note: GitHub sometimes delays scheduled workflows by several minutes or more when it is under load. When that happens, the page shows **DATA STALE** once `data.json` is more than 30 minutes old.
 
+## Vercel deployment: any US ZIP code
+
+`main` runs on Vercel (dfrpreflight.com), side by side with the GitHub Pages site.
+
+- `/` shows a ZIP form. `/08901` shows the pre-flight page for that ZIP; `/08901/` redirects there.
+- **Use my location** (on the form and on every location page) asks the browser for the device's position and opens `/?lat=40.512&lon=-74.406` (3 decimals, about 100 m). Distances are then measured from that point, not a ZIP centre. The nearest ZIP supplies the state for the TFR filter and the "Near Edison, NJ" label; a point more than 50 NM from every US ZIP centre is refused as outside coverage.
+- The page loads `/api/data?zip=08901` (or `/api/data?lat=…&lon=…`). The function `api/data.mjs` looks the ZIP up in `data/zips.json`, builds that location's config (`scripts/location.mjs`) and runs `scripts/fetch.mjs` on demand. An unknown ZIP returns 404 and the page shows the form again.
+- Vercel's CDN caches each ZIP's result for 5 minutes and serves a stale copy for up to 10 more while it refreshes, so data is at most about 15 minutes old, under the 30-minute DATA STALE limit. The TFR list, TFR details and Kp are the same for every ZIP, so a warm function instance shares them across ZIPs for 5 minutes.
+- `?data=samples/…` still previews the sample files, and `/data.json` still serves the fixed `config.json` location.
+
+What changes per ZIP:
+
+| | Fixed config (`config.json`) | ZIP page |
+| --- | --- | --- |
+| Centre | `center` | ZIP centre point from GeoNames (not the flight location; large rural ZIPs can be several NM across), or the device location |
+| TFR states | `tfrStates` | the (nearest) ZIP's state plus bordering states |
+| METAR / TAF | `stations`, `tafStations` | nearest `stationCount` (3) METAR and `tafCount` (2) TAF stations within `stationSearchNm` (60 NM), from an aviationweather.gov bounding-box query; no station in range is a CAUTION |
+| Time zone | `timeZone` | from the NWS point lookup, else the device's zone |
+
+Thresholds, TFR radius and everything else come from `config.json` for every ZIP.
+
+`data/zips.json` (about 41,000 ZIPs; territories and military APO/FPO codes are not included) is built from the GeoNames US postal-code file (CC BY 4.0; credited in the page footer). To refresh it:
+
+```sh
+curl -O https://download.geonames.org/export/zip/US.zip && unzip US.zip US.txt
+node scripts/build-zips.mjs US.txt
+```
+
+Setup: import the repository in Vercel (framework preset **Other**, no build command), add the `NWS_CONTACT` environment variable, and set the production branch to `main`.
+
 ## Editing `config.json`
 
 | Key | Meaning |
@@ -29,6 +59,8 @@ Note: GitHub sometimes delays scheduled workflows by several minutes or more whe
 | `forecastHours` | Number of hourly forecast rows shown. |
 | `staleMinutes` | Age after which the page shows DATA STALE. |
 | `thresholds` | Caution and no-go-review limits (see below). |
+| `airspaceRadiusNm` | Radius for the airspace card and map (restricted areas, nearest controlled airspace). Default: 3. |
+| `thresholds.airspace` | `controlledLevel` (1 = CAUTION) inside controlled airspace; `zeroCeilingLevel` (2 = NO-GO REVIEW) on a 0 ft facility map ceiling; `nearNm` (0.5) for "near a restricted area"; `stadiumLevel` (0 = information only). Agencies flying under a COA can lower these. |
 | `tfrDetailXmlUrls` | Per-TFR XML URL patterns, tried in order. `{id}` becomes `6_1234` for NOTAM `6/1234`. Edit these if the FAA moves the files. |
 
 Commit a change to `config.json` on `main` and the workflow redeploys automatically.
@@ -45,6 +77,7 @@ Commit a change to `config.json` on `main` and the workflow redeploys automatica
 | Kp | ≥ 4 | ≥ 5 |
 | TFR | within `tfrRadiusNm`, or distance unknown | within 5 NM, or covering the point |
 | NWS alert | Advisory | Watch or Warning |
+| Airspace | controlled airspace below 400 ft AGL (authorization needed); within 0.5 NM of a prohibited/restricted area or 99.7 restriction; DC SFRA | 0 ft facility map ceiling; inside a prohibited or restricted area, a 99.7 national security restriction, national defense airspace, or the DC FRZ |
 
 How the thresholds are applied:
 
@@ -56,11 +89,16 @@ How the thresholds are applied:
   - If `data.json` is more than 30 minutes old, the page shows DATA STALE and raises the banner to at least CAUTION.
   - A METAR older than 90 minutes (`metarMaxAgeMin`) is flagged CAUTION.
 - **TFR timing doesn't change the level.** Each TFR shows **ACTIVE NOW**, **STARTS IN …** (highlighted when it starts within 3 hours), **ENDED … ago** or **TIMES UNKNOWN**. The status is computed in the browser, so it stays current between refreshes. Upcoming and ended TFRs still raise the banner, because the FAA list is the source of truth and the time parsing can't be checked against every TFR format.
+- **Airspace is judged at the point, for flight up to 400 ft AGL.** Class B/C/D/E counts as controlled only where its floor is below 400 ft AGL; MSL floors are converted with the ground elevation from the NWS grid (unknown elevation is CAUTION, never assumed clear). Class E from 700/1,200 ft AGL and Mode C veils don't count. MOAs, warning and alert areas, and stadiums (the FDC 0/0367 stadium restriction is only active from 1 h before to 1 h after a qualifying game or race, and the FAA doesn't publish each game as a TFR) are shown for information. The DC FRZ and SFRA aren't in the FAA layers, so they're approximated as 15 and 30 NM circles around DCA.
 - **The page adds a note outside sunrise to sunset.** During civil twilight or at night it reminds the pilot that anti-collision lighting is required (14 CFR 107.29). This note does not change the banner.
 
 ## Page layout
 
-Each information card (TFRs, METAR, Next 6 hours, NWS alerts, Kp & daylight) starts collapsed. It shows only its title and what it contributes to the banner: GO, CAUTION, NO-GO REVIEW, or UNAVAILABLE when that card's source failed. Tap a card to open it. Cards stay open across the 5-minute refreshes. The official-source links are always shown.
+The **Map** card (Leaflet, loaded only when opened; street map or FAA VFR sectional) shows the point, the TFR radius, TFR shapes, the LAANC facility map grid colour-coded by ceiling (numbers appear when zoomed in), controlled airspace, restricted areas, stadiums and METAR stations. It remembers whether it was open.
+
+On screens 1000 px and wider the page is a dashboard: status, Airspace & LAANC and TFRs on the left, the map in a tall panel that stays in view, and the weather cards beside it (a third column from 1500 px). All cards start open there, the map can't be collapsed, and long TFR text is clamped to four lines (click to show all). The map's first view covers the airspace radius plus the nearest edge of each local TFR. The phone layout below is unchanged.
+
+Each information card (TFRs, Airspace & LAANC, METAR, Next 6 hours, NWS alerts, Kp & daylight) starts collapsed on phones. It shows only its title and what it contributes to the banner: GO, CAUTION, NO-GO REVIEW, or UNAVAILABLE when that card's source failed. Tap a card to open it. Cards stay open across the 5-minute refreshes. The official-source links are always shown.
 
 ## Installing on a phone
 
@@ -71,7 +109,9 @@ The page is a Progressive Web App, so it can be added to the home screen and ope
 
 Use the **Refresh** button at the top to reload data; installed apps have no browser reload. The page also refreshes every 5 minutes, when it comes back to the foreground, and when the phone reconnects.
 
-**Offline behaviour.** `sw.js` fetches everything from the network first and falls back to the last saved copy only when there is no connection. When it uses a saved `data.json`, the banner says *Last refresh failed: offline, showing last saved copy*. The data age still comes from `generated_at`, so DATA STALE appears after 30 minutes just as it does online. The installed app never shows saved data as current.
+On the installed app, the ZIP or location you last opened is remembered, so the app reopens there.
+
+**Offline behaviour.** `sw.js` fetches everything from the network first and falls back to the last saved copy only when there is no connection. When it uses saved data (`/api/data?…` or `data.json`, saved separately per ZIP or location), the banner says *Last refresh failed: offline, showing last saved copy*. The data age still comes from `generated_at`, so DATA STALE appears after 30 minutes just as it does online. The installed app never shows saved data as current.
 
 ## Data sources (all keyless)
 
@@ -82,6 +122,8 @@ Use the **Refresh** button at the top to reload data; installed apps have no bro
 | METAR / TAF | `https://aviationweather.gov/api/data/{metar,taf}?ids=…&format=json` |
 | NWS | `/points/{lat},{lon}`, then `forecastHourly` and `forecastGridData` (for gusts), plus `/alerts/active?point=` |
 | Kp | `https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json` |
+| FAA airspace | UAS Data Delivery System layers on `https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services/…/FeatureServer/0/query` (one envelope query each): `FAA_UAS_FacilityMap_Data`, `Class_Airspace`, `Special_Use_Airspace`, `DoD_Mar_13` (99.7 restrictions), `Part_Time_National_Security_UAS_Flight_Restrictions`, `National_Defense_Airspace_TFR_Areas`, `Stadiums`. ArcGIS reports query errors with HTTP 200; those fail the source. |
+| Map tiles (browser) | `tile.openstreetmap.org` (light use, attribution required) and the FAA `VFR_Sectional` tile service |
 
 How TFRs are filtered:
 
@@ -95,7 +137,7 @@ You need Node 20 or later. There are no dependencies.
 
 ```sh
 node scripts/fetch.mjs              # live fetch -> data.json (set NWS_CONTACT first)
-python3 -m http.server 8000         # then open http://localhost:8000/
+python3 -m http.server 8000         # then open http://localhost:8000/?data=data.json
 ```
 
 You can preview the bundled samples without network access:
@@ -131,7 +173,11 @@ index.html  app.js  suncalc.js   page (vanilla JS/CSS, no build, no CDN)
 manifest.webmanifest  sw.js      PWA manifest and offline-fallback service worker
 config.json                      hand-edited settings
 scripts/fetch.mjs                fetch + filter + thresholds -> data.json
+scripts/airspace.mjs  geo.mjs    FAA airspace layers -> airspace verdict + map data; shared geometry
+vendor/leaflet/                  Leaflet 1.9.4 (BSD-2-Clause), loaded by the map card
 .github/workflows/refresh.yml    cron every 10 min + manual run -> GitHub Pages
 assets/  favicon.ico              app icons, favicon and header mark (scripts/make-icons.py)
+api/data.mjs  vercel.json         Vercel: /NNNNN routing, on-demand data per ZIP behind the CDN cache
+scripts/location.mjs  data/zips.json  ZIP -> location config; scripts/build-zips.mjs rebuilds the data
 samples/  test/                  sample data.json files, fixtures, tests
 ```

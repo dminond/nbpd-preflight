@@ -1,0 +1,41 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -74.44,
+       40.47
+      ],
+      [
+       -74.44,
+       40.475
+      ],
+      [
+       -74.435,
+       40.475
+      ],
+      [
+       -74.435,
+       40.47
+      ],
+      [
+       -74.44,
+       40.47
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "Facility": "Raritan Arsenal",
+    "Base": "Raritan",
+    "Floor": "Surface",
+    "Ceiling": "400' AGL"
+   }
+  }
+ ]
+}

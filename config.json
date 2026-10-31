@@ -1,13 +1,18 @@
 {
   "name": "DFR Preflight",
+  "siteName": "DFR Preflight",
   "center": { "lat": 40.4862, "lon": -74.4518, "label": "New Brunswick, NJ" },
   "timeZone": "America/New_York",
   "tfrRadiusNm": 8,
+  "airspaceRadiusNm": 3,
   "tfrStates": ["NJ", "NY", "PA"],
   "stations": ["KSMQ", "KEWR", "KTTN"],
   "tafStations": ["KEWR", "KTTN"],
   "forecastHours": 6,
   "staleMinutes": 30,
+  "stationSearchNm": 60,
+  "stationCount": 3,
+  "tafCount": 2,
   "tfrDetailXmlUrls": [
     "https://tfr.faa.gov/download/detail_{id}.xml",
     "https://tfr.faa.gov/save_pages/detail_{id}.xml"
@@ -21,6 +26,7 @@
     "precipPct":     { "caution": 30 },
     "kp":            { "caution": 4,    "nogo": 5 },
     "tfrNm":         { "nogo": 5 },
+    "airspace":      { "controlledLevel": 1, "zeroCeilingLevel": 2, "nearNm": 0.5, "stadiumLevel": 0 },
     "metarMaxAgeMin": 90
   }
 }

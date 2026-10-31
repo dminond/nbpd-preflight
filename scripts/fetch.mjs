@@ -9,11 +9,16 @@
 //   node scripts/fetch.mjs --now 2026-10-15T17:50:00Z --sample-age 3 --fail kp,nws_hourly
 //
 // Env: NWS_CONTACT (email or URL, sent in the NWS User-Agent).
+//
+// With config "stations": null (ZIP pages, see location.mjs) the nearest METAR/TAF
+// stations are found with an aviationweather.gov bounding-box query instead.
 
 import { readFile, writeFile, rename } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { rad, distanceNm, bearingDeg, compass, projector, segDist, pointInPoly, bbox } from './geo.mjs';
+import { fetchAirspace, evaluateAirspace } from './airspace.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const LEVELS = ['GO', 'CAUTION', 'NO-GO REVIEW'];
@@ -38,11 +43,26 @@ function parseArgs(argv) {
 
 // ---------------------------------------------------------------- transport
 
-function makeTransport({ fixtures, fail }) {
+// Responses that are the same for every location (TFR list/details, Kp), kept across
+// requests while a server instance stays warm. Only used when sharedCacheMs is set.
+const SHARED = new Map();
+
+function makeTransport({ fixtures, fail, sharedCacheMs }) {
   const contact = process.env.NWS_CONTACT || 'contact-not-set';
   const nwsUA = `(nbpd-uas-preflight, ${contact})`;
 
-  async function get(key, url, { accept, nws, timeoutMs = TIMEOUT_MS, retries = 0 } = {}) {
+  async function get(key, url, opts = {}) {
+    if (!opts.shared || !sharedCacheMs || fixtures) return getUncached(key, url, opts);
+    const hit = SHARED.get(url);
+    if (hit && Date.now() - hit.at < sharedCacheMs) return hit.p;
+    // Store the promise so concurrent requests for the same URL share one fetch.
+    const p = getUncached(key, url, opts);
+    SHARED.set(url, { at: Date.now(), p });
+    p.catch(() => { if (SHARED.get(url)?.p === p) SHARED.delete(url); });
+    if (SHARED.size > 500) for (const [k, v] of SHARED) if (Date.now() - v.at >= sharedCacheMs) SHARED.delete(k);
+    return p;
+  }
+  async function getUncached(key, url, { accept, nws, timeoutMs = TIMEOUT_MS, retries = 0 } = {}) {
     if (fail.some(f => key === f || key.startsWith(f + '_'))) throw new Error('simulated failure (--fail)');
     if (fixtures) {
       const file = key.replace(/[^\w.-]/g, '_');
@@ -129,21 +149,7 @@ function findAll(el, name, out = []) {
 
 // ---------------------------------------------------------------- geo
 
-const R_NM = 3440.065;
-const rad = d => d * Math.PI / 180, deg = r => r * 180 / Math.PI;
-
-export function distanceNm(a, b) {
-  const dLat = rad(b.lat - a.lat), dLon = rad(b.lon - a.lon);
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
-  return 2 * R_NM * Math.asin(Math.min(1, Math.sqrt(h)));
-}
-export function bearingDeg(a, b) {
-  const y = Math.sin(rad(b.lon - a.lon)) * Math.cos(rad(b.lat));
-  const x = Math.cos(rad(a.lat)) * Math.sin(rad(b.lat)) - Math.sin(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.cos(rad(b.lon - a.lon));
-  return (deg(Math.atan2(y, x)) + 360) % 360;
-}
-const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-export const compass = b => COMPASS[Math.round(b / 22.5) % 16];
+export { distanceNm, bearingDeg, compass } from './geo.mjs';
 
 // Parse "40.48620000N", "074.45180000W", "404910N", "0742706.5W", "-74.45".
 export function parseCoord(s, isLon) {
@@ -167,29 +173,6 @@ export function parseCoord(s, isLon) {
   if (hemi === 'S' || hemi === 'W') val = -Math.abs(val);
   if (isLon ? Math.abs(val) > 180 : Math.abs(val) > 90) return null;
   return val;
-}
-
-// Local flat projection (NM) around the reference point; fine within ~100 NM.
-function projector(ref) {
-  const k = Math.cos(rad(ref.lat)) * 60;
-  return {
-    fwd: p => ({ x: (p.lon - ref.lon) * k, y: (p.lat - ref.lat) * 60 }),
-    inv: q => ({ lat: ref.lat + q.y / 60, lon: ref.lon + q.x / k }),
-  };
-}
-function segDist(p, a, b) {
-  const dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
-  let t = l2 ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2 : 0;
-  t = Math.max(0, Math.min(1, t));
-  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
-}
-function pointInPoly(p, poly) {
-  let inside = false;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const a = poly[i], b = poly[j];
-    if ((a.y > p.y) !== (b.y > p.y) && p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x) inside = !inside;
-  }
-  return inside;
 }
 
 // ---------------------------------------------------------------- TFR
@@ -268,7 +251,8 @@ export function parseTfrDetail(xml, center) {
   const not = findAll(doc, 'Not')[0] || doc;
   const areas = findAll(doc, 'TFRAreaGroup');
   const out = { altitudes: [], effective: toIsoUtc(txt(not, 'dateEffective')), expires: toIsoUtc(txt(not, 'dateExpire')),
-    title: txt(not, 'txtDescrUSNS') || txt(not, 'txtDescrPurpose') || null, distanceNm: null, bearingDeg: null, inside: false };
+    title: txt(not, 'txtDescrUSNS') || txt(not, 'txtDescrPurpose') || null, distanceNm: null, bearingDeg: null, inside: false, shapes: [] };
+  const ll = q => { const p = proj.inv(q); return [Math.round(p.lat * 1e5) / 1e5, Math.round(p.lon * 1e5) / 1e5]; };
   let best = null;
   for (const g of areas.length ? areas : [doc]) {
     const area = findAll(g, 'aseTFRArea')[0] || g;
@@ -278,6 +262,8 @@ export function parseTfrDetail(xml, center) {
     const geom = tfrAreaGeometry(g, proj);
     if (!geom) continue;
     let d, ctr;
+    // Shapes in lat/lon for the page's map.
+    out.shapes.push(geom.kind === 'circle' ? { type: 'circle', center: ll(geom.c), rNm: geom.r } : { type: 'polygon', ring: geom.pts.map(ll) });
     if (geom.kind === 'circle') {
       const dc = Math.hypot(geom.c.x, geom.c.y);
       d = Math.max(0, dc - geom.r); ctr = geom.c;
@@ -301,7 +287,7 @@ export function parseTfrDetail(xml, center) {
 }
 
 async function fetchTfrs(cfg, T, now, reasons) {
-  const raw = await T.getJSON('tfr_list', 'https://tfr.faa.gov/tfrapi/exportTfrList');
+  const raw = await T.getJSON('tfr_list', 'https://tfr.faa.gov/tfrapi/exportTfrList', { shared: true });
   const list = Array.isArray(raw) ? raw : (raw.data || raw.items || []);
   if (!Array.isArray(list)) throw new Error('unexpected TFR list format');
   const states = new Set(cfg.tfrStates.map(s => s.toUpperCase()));
@@ -319,7 +305,7 @@ async function fetchTfrs(cfg, T, now, reasons) {
     let detail = null, lastErr = null;
     for (const tmpl of cfg.tfrDetailXmlUrls) {
       try {
-        const xml = await T.get(`tfr_detail_${id}`, tmpl.replace('{id}', id), { accept: 'application/xml,text/xml' });
+        const xml = await T.get(`tfr_detail_${id}`, tmpl.replace('{id}', id), { accept: 'application/xml,text/xml', shared: true });
         if (!/<\w/.test(xml)) throw new Error('empty detail');
         detail = parseTfrDetail(xml, cfg.center);
         break;
@@ -405,6 +391,24 @@ export function decodeMetar(m, now, th, reasons) {
   return d;
 }
 
+// Nearest stations from a bounding-box response: latest report per station, closest first.
+export function nearestReports(arr, center, count, timeOf) {
+  const byStation = new Map();
+  for (const r of arr) {
+    const id = String(r.icaoId || r.stationId || '').toUpperCase(), lat = num(r.lat), lon = num(r.lon);
+    if (!id || lat == null || lon == null) continue;
+    const prev = byStation.get(id);
+    if (!prev || (Date.parse(timeOf(r) || 0) || 0) > (Date.parse(timeOf(prev) || 0) || 0)) byStation.set(id, r);
+  }
+  return [...byStation.values()]
+    .map(r => {
+      const p = { lat: Number(r.lat), lon: Number(r.lon) };
+      return { r, distanceNm: Math.round(distanceNm(center, p) * 10) / 10, compass: compass(bearingDeg(center, p)) };
+    })
+    .sort((a, b) => a.distanceNm - b.distanceNm)
+    .slice(0, count);
+}
+
 // ---------------------------------------------------------------- NWS
 
 const MPH_TO_KT = 0.868976, KMH_TO_KT = 1 / 1.852;
@@ -487,7 +491,7 @@ function latestKp(raw) {
 // ---------------------------------------------------------------- main
 
 export async function run(args) {
-  const cfg = JSON.parse(await readFile(args.config, 'utf8'));
+  const cfg = args.cfg || JSON.parse(await readFile(args.config, 'utf8'));
   const now = args.now || new Date();
   const T = makeTransport(args);
   const { lat, lon } = cfg.center;
@@ -507,21 +511,29 @@ export async function run(args) {
     }
   }
 
-  const ids = cfg.stations.join(',');
-  // Only airports that issue a TAF (KSMQ does not); asking for others just adds server work.
-  const tafIds = (cfg.tafStations || cfg.stations).join(',');
   const awc = 'https://aviationweather.gov/api/data';
+  const autoStations = !cfg.stations;
+  const searchNm = cfg.stationSearchNm || 60;
+  let metarQuery, tafQuery;
+  if (autoStations) {
+    metarQuery = tafQuery = `bbox=${bbox(cfg.center, searchNm)}`;
+  } else {
+    metarQuery = `ids=${cfg.stations.join(',')}`;
+    // Only airports that issue a TAF (KSMQ does not); asking for others just adds server work.
+    tafQuery = `ids=${(cfg.tafStations || cfg.stations).join(',')}`;
+  }
   const nwsPoint = `${lat.toFixed(4)},${lon.toFixed(4)}`;
 
   let awcChain;
-  const [tfrs, metarRaw, tafRaw, points, alertsRaw, kpRaw] = await Promise.all([
+  const [tfrs, metarRaw, tafRaw, points, alertsRaw, kpRaw, airspaceRaw] = await Promise.all([
     step('tfr', () => fetchTfrs(cfg, T, now, reasons)),
     // aviationweather.gov asks clients to space requests, so METAR then TAF in sequence.
-    awcChain = step('metar', () => T.getJSON('metar', `${awc}/metar?ids=${ids}&format=json`, { retries: 1 })),
-    awcChain.then(() => step('taf', () => T.getJSON('taf', `${awc}/taf?ids=${tafIds}&format=json`, { timeoutMs: 30000, retries: 1 }))),
+    awcChain = step('metar', () => T.getJSON('metar', `${awc}/metar?${metarQuery}&format=json`, { retries: 1 })),
+    awcChain.then(() => step('taf', () => T.getJSON('taf', `${awc}/taf?${tafQuery}&format=json`, { timeoutMs: 30000, retries: 1 }))),
     step('nws_points', () => T.getJSON('nws_points', `https://api.weather.gov/points/${nwsPoint}`, { nws: true })),
     step('nws_alerts', () => T.getJSON('nws_alerts', `https://api.weather.gov/alerts/active?point=${nwsPoint}`, { nws: true })),
-    step('kp', () => T.getJSON('kp', 'https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json')),
+    step('kp', () => T.getJSON('kp', 'https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json', { shared: true })),
+    step('airspace', () => fetchAirspace(cfg, T)),
   ]);
 
   // Hourly forecast + gust grid depend on /points.
@@ -537,8 +549,21 @@ export async function run(args) {
     sources.nws_grid = { ok: false, error: 'skipped: NWS points lookup failed' };
   }
 
+  let stations = cfg.stations;
   const metars = metarRaw ? await step('metar_decode', async () => {
     const arr = Array.isArray(metarRaw) ? metarRaw : Array.isArray(metarRaw?.features) ? metarRaw.features.map(f => f.properties || {}) : [];
+    if (autoStations) {
+      const near = nearestReports(arr, cfg.center, cfg.stationCount || 3, metarTime);
+      if (!near.length) reasons.push({ level: 1, source: 'metar', text: `No METAR station within ${searchNm} NM — check aviationweather.gov` });
+      stations = near.map(n => String(n.r.icaoId || n.r.stationId).toUpperCase());
+      return near.map(({ r, distanceNm, compass }) => {
+        const id = String(r.icaoId || r.stationId).toUpperCase();
+        try { return { ...decodeMetar({ ...r, icaoId: id }, now, th, reasons), distanceNm, compass, lat: Number(r.lat), lon: Number(r.lon) }; } catch (e) {
+          reasons.push({ level: 1, source: 'metar', text: `${id}: METAR could not be decoded` });
+          return { station: id, raw: r.rawOb || null, level: 1, flags: [`could not decode (${e.message})`], decodeError: true, distanceNm, compass };
+        }
+      });
+    }
     return cfg.stations.map(id => {
       const ts = x => Date.parse(metarTime(x) || 0) || 0;
       const m = arr.filter(x => String(x.icaoId || x.stationId || '').toUpperCase() === id).sort((a, b) => ts(b) - ts(a))[0];
@@ -553,8 +578,12 @@ export async function run(args) {
   if (sources.metar_decode?.ok) delete sources.metar_decode;
   else if (sources.metar_decode) { sources.metar = sources.metar_decode; delete sources.metar_decode; }
 
-  const tafs = tafRaw ? (Array.isArray(tafRaw) ? tafRaw : []).map(t => ({ station: t.icaoId, raw: t.rawTAF, issued: toIsoUtc(t.issueTime) }))
-    .sort((a, b) => cfg.stations.indexOf(a.station) - cfg.stations.indexOf(b.station)) : null;
+  const tafArr = tafRaw ? (Array.isArray(tafRaw) ? tafRaw : []) : null;
+  const tafs = !tafArr ? null : autoStations
+    ? nearestReports(tafArr, cfg.center, cfg.tafCount || 2, t => toIsoUtc(String(t.issueTime || '')))
+      .map(({ r: t, distanceNm, compass }) => ({ station: t.icaoId, raw: t.rawTAF, issued: toIsoUtc(t.issueTime), distanceNm, compass }))
+    : tafArr.map(t => ({ station: t.icaoId, raw: t.rawTAF, issued: toIsoUtc(t.issueTime) }))
+      .sort((a, b) => cfg.stations.indexOf(a.station) - cfg.stations.indexOf(b.station));
 
   const hourly = hourlyRaw ? await step('nws_hourly_decode', async () => { const h = buildHourly(hourlyRaw, gridRaw, now, cfg); summarizeForecast(h, reasons); return h; }) : null;
   if (sources.nws_hourly_decode) { if (!sources.nws_hourly_decode.ok) sources.nws_hourly = sources.nws_hourly_decode; delete sources.nws_hourly_decode; }
@@ -578,8 +607,14 @@ export async function run(args) {
     if (kp.level) reasons.push({ level: kp.level, source: 'kp', text: `Kp ${kp.kp}` });
   }
 
+  // MSL airspace floors need the ground elevation; the NWS grid carries it.
+  const elev = gridRaw?.properties?.elevation;
+  const groundFt = num(elev?.value) == null ? null : String(elev.unitCode || '').endsWith(':m') ? elev.value * 3.28084 : elev.value;
+  const airspace = airspaceRaw ? await step('airspace_decode', async () => evaluateAirspace(airspaceRaw, cfg, groundFt, now, reasons)) : null;
+  if (sources.airspace_decode) { if (!sources.airspace_decode.ok) sources.airspace = sources.airspace_decode; delete sources.airspace_decode; }
+
   // A missing source is itself a caution: the pilot must check it manually.
-  const LABEL = { tfr: 'TFR list', metar: 'METAR', taf: 'TAF', nws_points: 'NWS point lookup', nws_hourly: 'NWS hourly forecast', nws_alerts: 'NWS alerts', kp: 'Kp index' };
+  const LABEL = { airspace: 'FAA airspace data', tfr: 'TFR list', metar: 'METAR', taf: 'TAF', nws_points: 'NWS point lookup', nws_hourly: 'NWS hourly forecast', nws_alerts: 'NWS alerts', kp: 'Kp index' };
   for (const [k, s] of Object.entries(sources)) {
     if (!s.ok && LABEL[k]) reasons.push({ level: 1, source: k, text: `${LABEL[k]} unavailable — check official source` });
   }
@@ -591,20 +626,25 @@ export async function run(args) {
     schema: 1,
     generated_at: now.toISOString(),
     ...(args.sampleAge != null ? { sample: { age_minutes: args.sampleAge } } : {}),
-    config: { name: cfg.name, center: cfg.center, timeZone: cfg.timeZone, tfrRadiusNm: cfg.tfrRadiusNm, stations: cfg.stations, staleMinutes: cfg.staleMinutes, thresholds: th },
+    config: { name: cfg.name, zip: cfg.zip || null, nearZip: cfg.nearZip || null, center: cfg.center, timeZone: cfg.timeZone || p.timeZone || null, tfrRadiusNm: cfg.tfrRadiusNm,
+      tfrStates: cfg.tfrStates, stations, stationSearchNm: autoStations ? searchNm : null, staleMinutes: cfg.staleMinutes, thresholds: th },
     overall: { level: LEVELS[lvl], levelNum: lvl, reasons },
     sources,
     tfrs,
+    airspace,
     metars,
     tafs,
     hourly,
     alerts,
     kp,
-    nws: points ? { office: p.gridId || p.cwa || null, forecastUrl: `https://forecast.weather.gov/MapClick.php?lat=${lat}&lon=${lon}` } : null,
+    // The forecast link works without the points lookup, so the page never links to another location.
+    nws: { office: p.gridId || p.cwa || null, forecastUrl: `https://forecast.weather.gov/MapClick.php?lat=${lat}&lon=${lon}` },
   };
-  const tmp = args.out + '.tmp';
-  await writeFile(tmp, JSON.stringify(data, null, 1) + '\n');
-  await rename(tmp, args.out);
+  if (args.out) { // the Vercel function passes no out and serves the result directly
+    const tmp = args.out + '.tmp';
+    await writeFile(tmp, JSON.stringify(data, null, 1) + '\n');
+    await rename(tmp, args.out);
+  }
   return data;
 }
 

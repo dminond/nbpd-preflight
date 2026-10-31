@@ -1,0 +1,93 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -74.47,
+       40.5
+      ],
+      [
+       -74.47,
+       40.54
+      ],
+      [
+       -74.43,
+       40.54
+      ],
+      [
+       -74.43,
+       40.5
+      ],
+      [
+       -74.47,
+       40.5
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "NAME": "SOMERSET CLASS D",
+    "IDENT": "SMQ",
+    "ICAO_ID": "KSMQ",
+    "CLASS": "D",
+    "LOCAL_TYPE": "CLASS_D",
+    "LOWER_VAL": 0,
+    "LOWER_UOM": "FT",
+    "LOWER_CODE": "SFC",
+    "UPPER_VAL": 2500,
+    "UPPER_UOM": "FT",
+    "UPPER_CODE": "MSL",
+    "WKHR_CODE": "H24"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -74.7,
+       40.3
+      ],
+      [
+       -74.7,
+       40.7
+      ],
+      [
+       -74.2,
+       40.7
+      ],
+      [
+       -74.2,
+       40.3
+      ],
+      [
+       -74.7,
+       40.3
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "NAME": "NEW YORK CLASS B",
+    "IDENT": "JFK",
+    "ICAO_ID": "KJFK",
+    "CLASS": "B",
+    "LOCAL_TYPE": "CLASS_B",
+    "LOWER_VAL": 3000,
+    "LOWER_UOM": "FT",
+    "LOWER_CODE": "MSL",
+    "UPPER_VAL": 7000,
+    "UPPER_UOM": "FT",
+    "UPPER_CODE": "MSL",
+    "WKHR_CODE": "H24"
+   }
+  }
+ ]
+}
