@@ -1,16 +1,29 @@
-// NBPD UAS pre-flight page. Reads data.json (written by scripts/fetch.mjs),
-// re-polls every 5 minutes. All external text is inserted as text, never HTML.
+// UAS pre-flight page. /NNNNN reads /api/data?zip=NNNNN and /?lat=..&lon=.. reads
+// /api/data?lat=..&lon=.. (scripts/fetch.mjs behind a Vercel function); / shows a ZIP form. Re-polls every 5 minutes. All external text is inserted
+// as text, never HTML.
 (function () {
   'use strict';
   var POLL_MS = 5 * 60 * 1000, TICK_MS = 30 * 1000;
   var LEVELS = ['GO', 'CAUTION', 'NO-GO REVIEW'];
-  var state = { data: null, config: null, loadedAt: 0, lastError: null };
+  var state = { data: null, config: null, loadedAt: 0, lastError: null, loading: false, loadStart: 0 };
 
-  // ?data=samples/data-stale.json lets you preview the bundled samples.
+  // ?data=samples/data-stale.json (or data.json from a local fetch) previews a file;
+  // otherwise /08901 loads that ZIP, /?lat=..&lon=.. a device location, and / shows the ZIP form.
   var params = new URLSearchParams(location.search);
-  var dataUrl = 'data.json';
+  var zipMatch = location.pathname.match(/\/(\d{5})\/?$/);
+  var zip = zipMatch ? zipMatch[1] : null;
+  var COORD = /^-?\d{1,3}(\.\d+)?$/;
+  var point = COORD.test(params.get('lat') || '') && COORD.test(params.get('lon') || '') ? { lat: params.get('lat'), lon: params.get('lon') } : null;
+  var dataUrl = null;
   var p = params.get('data');
   if (p && /^[\w-]+(\/[\w-]+)*\.json$/.test(p)) dataUrl = p;
+  else if (zip) dataUrl = '/api/data?zip=' + zip;
+  else if (point) dataUrl = '/api/data?lat=' + point.lat + '&lon=' + point.lon;
+  // The installed app starts at /?app=1 (manifest start_url): reopen the last ZIP or location.
+  // A plain / (e.g. "change location") still shows the form.
+  if (!dataUrl && params.has('app')) {
+    try { var last = localStorage.getItem('lastPlace'); if (last && /^\/(\d{5}|\?lat=[-\d.]+&lon=[-\d.]+)$/.test(last)) { location.replace(last); return; } } catch (e) { /* storage blocked */ }
+  }
 
   // ------------------------------------------------------------ helpers
   function h(tag, attrs) {
@@ -30,7 +43,8 @@
     else el.appendChild(typeof c === 'object' ? c : document.createTextNode(String(c)));
   }
   function body(id) { var b = document.querySelector('#' + id + ' .body'); b.textContent = ''; b.className = 'body'; return b; }
-  function tz() { return (state.data && state.data.config && state.data.config.timeZone) || (state.config && state.config.timeZone) || 'America/New_York'; }
+  // No configured zone (NWS lookup failed): fall back to the device's own zone.
+  function tz() { return (state.data && state.data.config && state.data.config.timeZone) || undefined; }
   function fmtTime(d, opts) {
     if (!d) return '—';
     d = d instanceof Date ? d : new Date(d);
@@ -72,6 +86,16 @@
     var b = document.getElementById('banner');
     b.textContent = '';
     var d = state.data;
+    if (!d && state.loading) {
+      // A location's first check runs every source live (CDN cache miss) and can take a while.
+      var secs = Math.round((Date.now() - state.loadStart) / 1000);
+      b.className = 'lv-x loading';
+      append(b, [h('div', { class: 'lvl', text: 'LOADING…' }),
+        h('div', { class: 'asof', text: 'Checking FAA TFRs, METAR/TAF, NWS and Kp' }),
+        secs >= 5 ? h('div', { class: 'small', text: secs + ' s · the first check for a location can take up to 30 s' }) : null,
+        h('div', { class: 'bar' })]);
+      return;
+    }
     if (!d) {
       b.className = 'lv-x';
       append(b, [h('div', { class: 'lvl', text: 'NO DATA' }),
@@ -96,6 +120,7 @@
       if (reasons.length > 8) append(ul, h('li', { text: '+' + (reasons.length - 8) + ' more below' }));
       append(b, ul);
     }
+    if (state.loading) append(b, h('div', { class: 'bar', title: 'Refreshing' }));
     document.getElementById('sample').hidden = !d.sample;
   }
 
@@ -138,7 +163,7 @@
         h('dl', { class: 'kv' },
           h('dt', { text: 'Altitudes' }), h('dd', { text: (t.altitudes && t.altitudes.length) ? t.altitudes.join('; ') : 'see FAA detail' }),
           h('dt', { text: 'Window' }), h('dd', { text: win })),
-        h('div', { class: 'small', text: t.title && t.title !== t.description ? t.title + ' — ' + (t.description || '') : (t.description || '') }),
+        h('div', { class: 'small clamp', title: 'Show all', text: t.title && t.title !== t.description ? t.title + ' — ' + (t.description || '') : (t.description || '') }),
         t.note ? h('div', { class: 'small muted', text: t.note }) : null));
     });
     var nat = d.tfrs.national || [];
@@ -150,13 +175,15 @@
       });
       append(b, det);
     }
-    append(b, h('div', { class: 'small muted', text: 'Checked ' + (d.tfrs.checked || 0) + ' TFR(s) listed for ' + ((state.config && state.config.tfrStates) || ['NJ', 'NY', 'PA']).join('/') + '. Always confirm on the FAA TFR map.' }));
+    var states = (d.config && d.config.tfrStates) || (state.config && state.config.tfrStates) || [];
+    append(b, h('div', { class: 'small muted', text: 'Checked ' + (d.tfrs.checked || 0) + ' TFR(s) listed for ' + states.join('/') + '. Always confirm on the FAA TFR map.' }));
   }
 
   // ------------------------------------------------------------ METAR
   function renderMetar() {
     var d = state.data, b = body('s-metar');
     if (!srcOk('metar') || !d.metars) { append(b, srcErr('metar', 'METAR', 'https://aviationweather.gov/data/metar/')); return; }
+    if (!d.metars.length) append(b, h('div', { class: 'err', text: 'No METAR station within ' + (d.config.stationSearchNm || '?') + ' NM. Check aviationweather.gov.' }));
     d.metars.forEach(function (m) {
       if (m.missing) { append(b, h('div', { class: 'item' }, h('div', { class: 'row' }, h('span', { class: 'big', text: m.station }), tag(1)), h('div', { text: 'No current METAR' }))); return; }
       if (m.decodeError) {
@@ -173,6 +200,7 @@
           m.flightCategory ? h('span', { class: 'cat cat-' + m.flightCategory, text: m.flightCategory }) : null,
           tag(m.level || 0),
           h('span', { class: 'small muted', text: m.obsTime ? fmtTime(m.obsTime) + ' · ' + ago(Date.now() - new Date(m.obsTime)) : 'time unknown' })),
+        m.distanceNm != null ? h('div', { class: 'small muted', text: m.distanceNm + ' NM ' + m.compass + (m.name ? ' · ' + m.name : '') }) : null,
         h('dl', { class: 'kv' },
           h('dt', { text: 'Wind' }), h('dd', { text: wind }),
           h('dt', { text: 'Visibility' }), h('dd', { text: vis }),
@@ -205,8 +233,11 @@
     }
     var tafBox = h('div', { class: 'item' }, h('h2', { text: 'TAF' }));
     if (!srcOk('taf') || !d.tafs) append(tafBox, srcErr('taf', 'TAF', 'https://aviationweather.gov/data/taf/'));
-    else if (!d.tafs.length) append(tafBox, h('div', { class: 'muted', text: 'No TAFs issued for these stations (KSMQ does not issue a TAF).' }));
-    else d.tafs.forEach(function (t) { append(tafBox, h('div', { class: 'mono', text: t.raw })); });
+    else if (!d.tafs.length) append(tafBox, h('div', { class: 'muted', text: d.config.stationSearchNm ? 'No TAF-issuing airport within ' + d.config.stationSearchNm + ' NM.' : 'No TAFs issued for these stations.' }));
+    else d.tafs.forEach(function (t) {
+      if (t.distanceNm != null) append(tafBox, h('div', { class: 'small muted', text: t.station + ' · ' + t.distanceNm + ' NM ' + t.compass }));
+      append(tafBox, h('div', { class: 'mono', text: t.raw }));
+    });
     append(b, tafBox);
   }
 
@@ -255,9 +286,167 @@
     }
   }
 
+  // ------------------------------------------------------------ airspace
+  function nm(d, dir) { return d === 0 ? 'here' : d + ' NM ' + (dir || ''); }
+  function renderAirspace() {
+    var d = state.data, b = body('s-air'), a = d.airspace;
+    if (!srcOk('airspace') || !a) { append(b, srcErr('airspace', 'FAA airspace data', 'https://www.faa.gov/uas/getting_started/b4ufly')); return; }
+    var pt = a.point || {};
+    if (pt.controlled) {
+      append(b, h('div', { class: 'item' },
+        h('div', { class: 'row' }, h('span', { class: 'big', text: 'Class ' + pt.cls + (pt.airport ? ' · ' + pt.airport : '') }), tag(pt.ceilingFt === 0 ? 2 : 1, 'CONTROLLED')),
+        h('div', { text: 'Controlled airspace: Part 107 flight needs FAA authorization (LAANC, FAADroneZone, or your agency’s COA/waiver).' }),
+        h('dl', { class: 'kv' },
+          h('dt', { text: 'LAANC ceiling' }), h('dd', { text: pt.ceilingFt == null ? 'No facility map grid here — request via FAADroneZone' : pt.ceilingFt === 0 ? '0 ft — no automatic approval' : pt.ceilingFt + ' ft AGL' }),
+          h('dt', { text: 'LAANC' }), h('dd', { text: pt.laanc == null ? '—' : pt.laanc ? 'Available' : 'Not available at this airport — use FAADroneZone' }),
+          pt.airportName ? h('dt', { text: 'Airport' }) : null, pt.airportName ? h('dd', { text: pt.airportName }) : null,
+          pt.name ? h('dt', { text: 'Airspace' }) : null, pt.name ? h('dd', { text: pt.name + (pt.partTime ? ' (part-time — check hours)' : '') }) : null)));
+    } else if (pt.controlled === false) {
+      append(b, h('div', { class: 'item' },
+        h('div', { class: 'row' }, h('span', { class: 'big', text: 'Class G' }), tag(0, 'UNCONTROLLED')),
+        h('div', { text: 'No airspace authorization needed at this point up to 400 ft AGL.' }),
+        a.nearestControlled ? h('div', { class: 'small', text: 'Nearest controlled airspace: Class ' + a.nearestControlled.cls + ' (' + a.nearestControlled.name + ') ' + nm(a.nearestControlled.distanceNm, a.nearestControlled.compass) }) : null));
+    } else {
+      append(b, h('div', { class: 'item err', text: 'Airspace class could not be determined here (' + (pt.name || 'MSL floor') + ', ground elevation unknown). Check the sectional or B4UFLY.' }));
+    }
+    a.overhead.forEach(function (o) { append(b, h('div', { class: 'small muted', text: 'Overhead: Class ' + o.cls + ' from ' + o.floor + ' (about ' + o.floorAgl.toLocaleString('en-US') + ' ft AGL)' })); });
+
+    var rs = a.restrictions || [];
+    if (rs.length) {
+      var box = h('div', { class: 'item' }, h('h2', { text: 'Restricted areas within ' + a.radiusNm + ' NM' }));
+      rs.forEach(function (r) {
+        append(box, h('div', { class: 'item' },
+          h('div', { class: 'row' }, h('strong', { text: r.name }), r.inside ? tag(2, 'INSIDE') : h('span', { class: 'small', text: nm(r.distanceNm, r.compass) })),
+          h('div', { class: 'small', text: r.label + (r.floor || r.ceiling ? ' · ' + (r.floor || '?') + ' – ' + (r.ceiling || '?') : '') + (r.times ? ' · ' + r.times : '') + (r.note ? ' · ' + r.note : '') })));
+      });
+      append(b, box);
+    }
+    (a.other || []).forEach(function (o) { append(b, h('div', { class: 'small', text: 'ℹ Inside ' + o.name + ' (' + ({ MOA: 'military operations area', W: 'warning area', A: 'alert area', D: 'danger area' }[o.kind] || o.kind) + ')' + (o.times ? ' · ' + o.times : '') + ' — no sUAS restriction; watch for low-flying aircraft.' })); });
+    (a.stadiums || []).forEach(function (s) {
+      append(b, h('div', { class: 'small' }, '🏟 ', h('strong', { text: s.name }), ' ' + nm(s.distanceNm, s.compass) + ' — within its 3 NM stadium restriction (',
+        h('a', { href: 'https://tfr.faa.gov/tfr3/?page=detail_0_0367', target: '_blank', rel: 'noopener', text: 'FDC 0/0367' }),
+        '): no drone flight up to 3,000 ft AGL from 1 h before to 1 h after a qualifying game or race (MLB, NFL, NCAA Division I football, major auto racing). Not shown as a TFR — check the event schedule.'));
+    });
+    append(b, h('div', { class: 'small muted', text: 'FAA UAS Data Delivery System' + (a.mapEffective ? ' · facility map effective ' + a.mapEffective : '') +
+      (a.groundElevFt != null ? ' · ground ' + a.groundElevFt + ' ft MSL (NWS)' : '') + '. Confirm with B4UFLY or your LAANC provider before flight.' }));
+  }
+
+  // ------------------------------------------------------------ map
+  // Leaflet is vendored and only loaded when the map card is first opened.
+  var map = null, mapLayers = null, leafletLoading = null;
+  var CEIL_COLORS = [[0, '#d10000'], [100, '#ff7a00'], [200, '#ffc400'], [300, '#7bc043'], [400, '#0b8a3a']];
+  function ceilColor(c) { for (var i = 0; i < CEIL_COLORS.length; i++) if (c <= CEIL_COLORS[i][0]) return CEIL_COLORS[i][1]; return '#0b8a3a'; }
+  var CLASS_STYLE = { B: { color: '#1f5fd1' }, C: { color: '#b000b0' }, D: { color: '#1f5fd1', dashArray: '6 5' }, E: { color: '#b000b0', dashArray: '6 5' } };
+  function loadLeaflet() {
+    if (window.L) return Promise.resolve();
+    return leafletLoading || (leafletLoading = new Promise(function (resolve, reject) {
+      var css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'vendor/leaflet/leaflet.css'; document.head.appendChild(css);
+      var js = document.createElement('script'); js.src = 'vendor/leaflet/leaflet.js'; js.onload = resolve;
+      js.onerror = function () { leafletLoading = null; reject(new Error('map library failed to load')); };
+      document.head.appendChild(js);
+    }));
+  }
+  function initMap() {
+    var el = document.getElementById('map');
+    map = L.map(el, { zoomSnap: 0.5 });
+    var osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' });
+    var sectional = L.tileLayer('https://tiles.arcgis.com/tiles/ssFJjBXIUyZDrSYZ/arcgis/rest/services/VFR_Sectional/MapServer/tile/{z}/{y}/{x}',
+      { maxZoom: 16, maxNativeZoom: 12, attribution: 'FAA Aeronautical Information Services' });
+    osm.addTo(map);
+    mapLayers = { grid: L.layerGroup(), airspace: L.layerGroup(), restricted: L.layerGroup(), tfr: L.layerGroup(), stations: L.layerGroup(), stadiums: L.layerGroup(), center: L.layerGroup() };
+    ['grid', 'airspace', 'restricted', 'tfr', 'stations', 'stadiums', 'center'].forEach(function (k) { mapLayers[k].addTo(map); });
+    L.control.layers({ 'Street map': osm, 'FAA VFR sectional': sectional }, {
+      'LAANC grid': mapLayers.grid, 'Controlled airspace': mapLayers.airspace, 'Restricted areas': mapLayers.restricted,
+      'TFRs': mapLayers.tfr, 'METAR stations': mapLayers.stations, 'Stadiums': mapLayers.stadiums,
+    }, { collapsed: true }).addTo(map);
+    L.control.scale({ imperial: true, metric: false }).addTo(map);
+    // Ceiling numbers once a facility map cell (1/120 degree) is tall enough on screen to hold one.
+    function labels() {
+      var c = map.getCenter(), a = map.latLngToContainerPoint(c), b = map.latLngToContainerPoint([c.lat + 1 / 120, c.lng]);
+      el.classList.toggle('labels', Math.abs(a.y - b.y) >= 30);
+    }
+    map.on('zoomend', labels);
+    drawMap(true);
+    labels();
+  }
+  function tip(layer, text) { layer.bindTooltip(text, { sticky: true }); return layer; }
+  function drawMap(fit) {
+    var d = state.data;
+    if (!map || !d || !d.config || !d.config.center) return;
+    Object.keys(mapLayers).forEach(function (k) { mapLayers[k].clearLayers(); });
+    var c = d.config.center, here = [c.lat, c.lon], NM = 1852;
+    var a = d.airspace, m = a && a.map;
+    if (m) {
+      m.cells.forEach(function (x) {
+        var col = ceilColor(x[4]), r = L.rectangle([[x[0], x[1]], [x[2], x[3]]], { color: col, weight: 0.5, fillColor: col, fillOpacity: 0.28, interactive: false });
+        r.bindTooltip(String(x[4]), { permanent: true, direction: 'center', className: 'ceil' });
+        mapLayers.grid.addLayer(r);
+      });
+      m.classes.forEach(function (x) {
+        var st = CLASS_STYLE[x.cls] || CLASS_STYLE.E;
+        mapLayers.airspace.addLayer(tip(L.polygon(x.rings, { color: st.color, dashArray: st.dashArray, weight: x.surface ? 2.5 : 1.2, fill: false }),
+          x.name + ' · floor ' + (x.floor || '?')));
+      });
+      m.areas.forEach(function (x) {
+        var hard = ['P', 'R', 'NSUFR', 'NDA', 'DC'].indexOf(x.kind) >= 0;
+        var st = hard ? { color: '#d10000', weight: 2, fillColor: '#d10000', fillOpacity: x.kind === 'DC' ? 0.04 : 0.25 } : { color: '#777', weight: 1, dashArray: '4 4', fillOpacity: 0.05 };
+        var shape = x.circle ? L.circle(x.circle.center, Object.assign({ radius: x.circle.rNm * NM }, st)) : L.polygon(x.rings, st);
+        mapLayers.restricted.addLayer(tip(shape, x.name));
+      });
+      m.stadiums.forEach(function (s) {
+        mapLayers.stadiums.addLayer(tip(L.circle([s.lat, s.lon], { radius: 3 * NM, color: '#7a00b5', weight: 1, dashArray: '3 5', fill: false }), s.name + ' · 3 NM stadium restriction during events (FDC 0/0367)'));
+        mapLayers.stadiums.addLayer(tip(L.circleMarker([s.lat, s.lon], { radius: 5, color: '#7a00b5', fillColor: '#7a00b5', fillOpacity: 1 }), s.name));
+      });
+    }
+    ((d.tfrs && d.tfrs.local) || []).forEach(function (t) {
+      (t.shapes || []).forEach(function (s) {
+        var st = { color: '#ff0000', weight: 2, fillColor: '#ff0000', fillOpacity: 0.18 };
+        var shape = s.type === 'circle' ? L.circle(s.center, Object.assign({ radius: s.rNm * NM }, st)) : L.polygon(s.ring, st);
+        mapLayers.tfr.addLayer(tip(shape, 'TFR ' + t.id + ' ' + (t.type || '')));
+      });
+    });
+    (d.metars || []).forEach(function (s) {
+      if (s.lat == null || s.lon == null) return;
+      mapLayers.stations.addLayer(L.circleMarker([s.lat, s.lon], { radius: 6, color: '#000', weight: 1, fillColor: '#fff', fillOpacity: 1 })
+        .bindTooltip(s.station, { permanent: true, direction: 'right', offset: [6, 0] }));
+    });
+    var radius = d.config.tfrRadiusNm;
+    if (radius) mapLayers.center.addLayer(tip(L.circle(here, { radius: radius * NM, color: '#555', weight: 1.5, dashArray: '8 6', fill: false, interactive: true }), 'TFR search radius ' + radius + ' NM'));
+    mapLayers.center.addLayer(tip(L.circleMarker(here, { radius: 8, color: '#fff', weight: 3, fillColor: '#0057ff', fillOpacity: 1 }), c.label || 'Location'));
+    if (fit) {
+      // The airspace radius, widened to the nearest edge of each local TFR.
+      var bounds = L.latLng(here).toBounds(((a && a.radiusNm) || 3) * 2 * NM);
+      ((d.tfrs && d.tfrs.local) || []).forEach(function (t) {
+        if (t.distanceNm == null || t.bearingDeg == null) return;
+        var r = (t.distanceNm + 0.5) / 60, b = t.bearingDeg * Math.PI / 180;
+        bounds.extend([c.lat + r * Math.cos(b), c.lon + r * Math.sin(b) / Math.cos(c.lat * Math.PI / 180)]);
+      });
+      map.fitBounds(bounds);
+    }
+  }
+  function openMap() {
+    loadLeaflet().then(function () { if (!map) initMap(); else { map.invalidateSize(); drawMap(false); } })
+      .catch(function (e) { document.getElementById('map').textContent = 'Map unavailable: ' + e.message; });
+  }
+  var mapDetails = document.querySelector('#s-map details');
+  // Desktop dashboard (see the CSS): every card open and the map always shown. The phone's
+  // remembered map open/closed choice is left alone.
+  var desktop = window.matchMedia ? window.matchMedia('(min-width: 1000px)') : { matches: false };
+  function applyLayout() {
+    if (desktop.matches) document.querySelectorAll('section.card > details').forEach(function (d) { d.open = true; });
+    if (map) map.invalidateSize();
+  }
+  try { if (localStorage.getItem('mapOpen') === '1') mapDetails.open = true; } catch (e) { /* storage blocked */ }
+  applyLayout();
+  if (desktop.addEventListener) desktop.addEventListener('change', applyLayout);
+  mapDetails.addEventListener('toggle', function () {
+    if (!desktop.matches) try { localStorage.setItem('mapOpen', mapDetails.open ? '1' : '0'); } catch (e) { /* storage blocked */ }
+    if (mapDetails.open && state.data) openMap();
+  });
+
   function renderSources() {
     var d = state.data, b = body('s-sources');
-    var names = { tfr: 'FAA TFR list', metar: 'METAR', taf: 'TAF', nws_points: 'NWS point', nws_hourly: 'NWS hourly', nws_grid: 'NWS gusts', nws_alerts: 'NWS alerts', kp: 'SWPC Kp' };
+    var names = { airspace: 'FAA airspace', tfr: 'FAA TFR list', metar: 'METAR', taf: 'TAF', nws_points: 'NWS point', nws_hourly: 'NWS hourly', nws_grid: 'NWS gusts', nws_alerts: 'NWS alerts', kp: 'SWPC Kp' };
     Object.keys(d.sources || {}).forEach(function (k) {
       var s = d.sources[k];
       append(b, h('div', null, s.ok ? '✅ ' : '❌ ', h('strong', { text: names[k] || k }), s.ok ? '' : ' — ' + s.error));
@@ -268,6 +457,7 @@
   // Which overall-banner reasons and data sources belong to each collapsible card.
   var CARDS = {
     's-tfr': ['tfr'],
+    's-air': ['airspace'],
     's-metar': ['metar'],
     's-fcst': ['forecast', 'nws_points', 'nws_hourly', 'taf'],
     's-alerts': ['nws_alerts'],
@@ -288,34 +478,103 @@
     });
   }
 
+  function renderPlace() {
+    var c = state.data && state.data.config, el = document.getElementById('place');
+    if (!c || !c.center || !c.center.label) { el.hidden = true; return; }
+    el.hidden = false; el.textContent = '';
+    var device = c.center.source === 'device';
+    var geo = navigator.geolocation ? h('button', { type: 'button', text: device ? 'Update my location' : 'Use my location' }) : null;
+    if (geo) geo.addEventListener('click', function () { locate(geo); });
+    append(el, ['📍 ', h('strong', { text: device ? 'Your location' : c.center.label }),
+      h('span', { class: 'muted', text: (device ? ' · ' + c.center.label : '') + ' · distances from ' + (device ? 'this point ' : c.zip ? 'the ZIP centre ' : '') +
+        '(' + c.center.lat.toFixed(device ? 3 : 4) + ', ' + c.center.lon.toFixed(device ? 3 : 4) + ') · ' }),
+      h('a', { href: '/', text: device ? 'Enter a ZIP' : 'Change ZIP' }), geo ? ' · ' : null, geo]);
+    if (c.name) document.getElementById('title').textContent = c.name;
+    document.title = (c.name || 'Pre-Flight') + ' — ' + c.center.label;
+  }
+
   function render() {
     renderBanner();
     renderContributions();
+    renderPlace();
     if (!state.data) return;
     if (state.data.nws && state.data.nws.forecastUrl) document.getElementById('nws-link').href = state.data.nws.forecastUrl;
-    [renderTfr, renderMetar, renderForecast, renderAlerts, renderSky, renderSources].forEach(function (fn) {
+    [renderTfr, renderAirspace, renderMetar, renderForecast, renderAlerts, renderSky, renderSources].forEach(function (fn) {
       try { fn(); } catch (e) { console.error(e); }
     });
+    if (mapDetails.open) { if (map) drawMap(false); else openMap(); }
   }
 
   // ------------------------------------------------------------ loading
   function getJSON(url) {
-    return fetch(url + (url.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now(), { cache: 'no-store' }).then(function (r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
+    // No cache-busting query string: it would make every poll a CDN cache miss on Vercel.
+    return fetch(url, { cache: 'no-store' }).then(function (r) {
+      if (!r.ok) throw Object.assign(new Error('HTTP ' + r.status), { status: r.status });
       var cached = r.headers.get('X-From-Cache') === '1'; // served by sw.js while offline
       return r.json().then(function (j) { if (j && typeof j === 'object') Object.defineProperty(j, '_fromCache', { value: cached }); return j; });
     });
   }
   function load() {
+    if (!dataUrl || state.loading) return;
+    state.loading = true; state.loadStart = Date.now();
+    renderBanner();
+    var tick = state.data ? null : setInterval(renderBanner, 1000);
     return getJSON(dataUrl).then(function (d) {
       if (!d || !d.generated_at) throw new Error('invalid data file');
       // An offline copy keeps its original generated_at, so the age and DATA STALE stay correct.
       if (d._fromCache && state.data && state.data.generated_at === d.generated_at) { state.lastError = 'offline, showing last saved copy'; return; }
       state.data = d; state.loadedAt = Date.now(); state.lastError = d._fromCache ? 'offline, showing last saved copy' : null;
+      if (zip) try { localStorage.setItem('zip', zip); } catch (e) { /* storage blocked */ }
+      if ((zip || point) && !p) try { localStorage.setItem('lastPlace', zip ? '/' + zip : '/?lat=' + point.lat + '&lon=' + point.lon); } catch (e) { /* storage blocked */ }
     }).catch(function (e) {
+      if (e.status === 404 && (zip || point) && !p) {
+        dataUrl = null;
+        showZipEntry(zip ? 'ZIP ' + zip + ' was not found. Check the number, or try a nearby ZIP.' : 'That location is outside US coverage. Enter a ZIP instead.');
+        return;
+      }
       state.lastError = e.message || String(e); // keep showing the previous data; it will go stale
-    }).then(render);
+    }).then(function () {
+      state.loading = false; clearInterval(tick);
+      if (dataUrl) render();
+    });
   }
+
+  // ------------------------------------------------------------ ZIP form
+  function showZipEntry(msg) {
+    document.body.classList.add('landing');
+    document.getElementById('zip-entry').hidden = false;
+    var m = document.getElementById('zip-msg');
+    m.hidden = !msg; m.textContent = msg || '';
+    var input = document.getElementById('zip-input');
+    if (!input.value) try { input.value = localStorage.getItem('zip') || ''; } catch (e) { /* storage blocked */ }
+  }
+  // Device location -> /?lat=..&lon=.. (3 decimals, ~100 m). Needs HTTPS and the user's permission.
+  function locate(btn) {
+    var label = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Locating…';
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      location.href = '/?lat=' + pos.coords.latitude.toFixed(3) + '&lon=' + pos.coords.longitude.toFixed(3);
+    }, function (err) {
+      btn.disabled = false; btn.textContent = label;
+      var msg = err.code === 1 ? 'Location permission was denied. Allow it in your browser settings, or enter a ZIP.'
+        : err.code === 3 ? 'Finding your location timed out. Try again, or enter a ZIP.' : 'Your location is unavailable. Enter a ZIP instead.';
+      if (document.body.classList.contains('landing')) showZipEntry(msg);
+      else alert(msg);
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+  }
+  var geoBtn = document.getElementById('geo-btn');
+  if (navigator.geolocation) { geoBtn.hidden = false; geoBtn.addEventListener('click', function () { locate(geoBtn); }); }
+
+  // Long TFR text is clamped on desktop (CSS); a click shows all of it.
+  document.addEventListener('click', function (e) { if (e.target.classList && e.target.classList.contains('clamp')) e.target.classList.toggle('open'); });
+
+  document.getElementById('zip-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var v = document.getElementById('zip-input').value.trim();
+    if (/^\d{5}$/.test(v)) location.href = '/' + v;
+    else showZipEntry('Enter a 5-digit ZIP code.');
+  });
+  if (!dataUrl) showZipEntry();
 
   // Theme toggle (remembered per device).
   var root = document.documentElement;
@@ -327,7 +586,8 @@
   });
 
   getJSON('config.json').then(function (c) { state.config = c; }).catch(function () {}).then(function () {
-    if (state.config && state.config.name) { document.getElementById('title').textContent = state.config.name; document.title = state.config.name; }
+    var c = state.config;
+    if (c && !(state.data && state.data.config && state.data.config.name)) { document.getElementById('title').textContent = document.title = (zip || point || !dataUrl ? c.siteName : c.name) || c.name; }
   });
   load();
   setInterval(load, POLL_MS);
@@ -335,10 +595,16 @@
     renderBanner();
     if (state.data) try { renderTfr(); } catch (e) { console.error(e); }
   }, TICK_MS);
-  document.getElementById('refresh').addEventListener('click', load); // no pull-to-refresh when installed
-  window.addEventListener('online', load);
+  document.getElementById('refresh').addEventListener('click', function () { load(); }); // no pull-to-refresh when installed
+  window.addEventListener('online', function () { load(); });
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    var hadController = !!navigator.serviceWorker.controller;
+    // First visit: the page loaded before the worker took control, so fetch once more to save an offline copy.
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (hadController) return; hadController = true;
+      (function again() { if (state.loading) setTimeout(again, 1000); else load(); })(); // wait out a load already in flight
+    });
     navigator.serviceWorker.register('sw.js').catch(function (e) { console.warn('service worker not registered', e); });
   }
-  document.addEventListener('visibilitychange', function () { if (!document.hidden && Date.now() - state.loadedAt > 60000) load(); });
+  document.addEventListener('visibilitychange', function () { if (dataUrl && !document.hidden && Date.now() - state.loadedAt > 60000) load(); });
 })();

@@ -3,7 +3,7 @@
   "short_name": "DFR Preflight",
   "description": "Pre-flight situational awareness for drone-as-first-responder pilots: TFRs, METAR/TAF, NWS forecast and alerts, Kp, daylight.",
   "id": "./",
-  "start_url": "./",
+  "start_url": "./?app=1",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

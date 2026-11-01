@@ -1,0 +1,21 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -74.465,
+     40.513
+    ]
+   },
+   "properties": {
+    "NAME": "SHI Stadium",
+    "CITY": "Piscataway",
+    "STATE": "NJ",
+    "STATUS_CODE": "Open"
+   }
+  }
+ ]
+}

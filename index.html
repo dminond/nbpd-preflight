@@ -53,6 +53,14 @@ button { font: inherit; font-size: .85rem; color: var(--fg); background: var(--c
 .lv-1 { background: var(--caution); color: var(--caution-fg); }
 .lv-2 { background: var(--nogo); color: var(--nogo-fg); }
 .lv-x { background: var(--info); color: var(--info-fg); border-color: var(--nogo) !important; }
+/* Loading: neutral border, pulsing label, and a thin sliding bar (also shown briefly on each refresh). */
+#banner.loading { border-color: var(--line) !important; }
+#banner.loading .lvl { animation: pulse 1.6s ease-in-out infinite; }
+#banner .bar { position: relative; height: 4px; margin-top: 10px; border-radius: 2px; overflow: hidden; background: color-mix(in srgb, currentColor 15%, transparent); }
+#banner .bar::before { content: ''; position: absolute; top: 0; bottom: 0; width: 35%; border-radius: 2px; background: currentColor; opacity: .55; animation: slide 1.4s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .45; } }
+@keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
+@media (prefers-reduced-motion: reduce) { #banner.loading .lvl, #banner .bar::before { animation: none; } #banner .bar::before { width: 100%; opacity: .3; } }
 #banner.lv-1 a, #banner.lv-1 { --link: #000; }
 
 section { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin: 0 0 12px; }
@@ -93,38 +101,118 @@ section.card > details > .body { padding: 0 14px 12px; }
 .cat { font-weight: 900; padding: 1px 6px; border-radius: 4px; color: #fff; }
 .cat-VFR { background: #0b8a3a; } .cat-MVFR { background: #1f5fd1; } .cat-IFR { background: #d10000; } .cat-LIFR { background: #b000b0; }
 footer { font-size: .85rem; color: var(--muted); margin-top: 16px; border-top: 1px solid var(--line); padding-top: 10px; }
+#place { margin: -2px 0 8px; }
+#zip-entry form { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+#zip-entry input { font: inherit; font-size: 1.4rem; font-weight: 800; letter-spacing: .1em; width: 7em; padding: 6px 10px; border-radius: 8px; border: 2px solid var(--line); background: var(--bg); color: var(--fg); }
+#zip-entry button { font-size: 1rem; }
+#geo-btn { margin-top: 10px; width: 100%; font-weight: 700; }
+#place button { font-size: inherit; min-height: 0; padding: 0; border: 0; background: none; color: var(--link); text-decoration: underline; cursor: pointer; }
+body.landing #banner, body.landing #place, body.landing section.card, body.landing #s-sources { display: none; }
+/* Map: legend swatches match the layer styles in app.js. */
+#map { height: 380px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); }
+#map .leaflet-tooltip.ceil { background: none; border: 0; box-shadow: none; padding: 0; font: 700 11px/1 system-ui, sans-serif; color: #000; text-shadow: 0 0 2px #fff, 0 0 2px #fff; }
+#map .leaflet-tooltip.ceil::before { display: none; }
+#map:not(.labels) .leaflet-tooltip.ceil { display: none; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; font-size: .78rem; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { display: inline-block; width: 16px; height: 11px; border-radius: 2px; border: 2px solid transparent; }
+.sw-0 { background: #d1000055; } .sw-100 { background: #ff7a0055; } .sw-200 { background: #ffc40066; } .sw-300 { background: #7bc04366; } .sw-400 { background: #0b8a3a55; }
+.sw-b { border-color: #1f5fd1 !important; } .sw-c { border-color: #b000b0 !important; } .sw-d { border: 2px dashed #1f5fd1 !important; } .sw-e { border: 2px dashed #b000b0 !important; }
+.sw-x { background: #d1000040; border-color: #d10000 !important; } .sw-t { background: #ff000030; border-color: #ff0000 !important; }
 #sample { background: #7a00b5; color: #fff; font-weight: 900; text-align: center; padding: 4px; border-radius: 6px; margin-top: 8px; }
 @media (max-width: 420px) { body { font-size: 18px; } #banner .lvl { font-size: 2rem; } .links { grid-template-columns: 1fr; } }
+
+/* Layout. Phone: one column in the order below (the column wrappers dissolve). Desktop: a
+   dashboard with status/airspace/TFRs, a tall map that stays in view, and the weather. */
+.dash { display: flex; flex-direction: column; }
+.dash > .col { display: contents; }
+#banner { order: 1; } #s-map { order: 2; } #s-tfr { order: 3; } #s-air { order: 4; } .col-wx > section { order: 5; }
+@media (min-width: 1000px) {
+  body { font-size: 16px; }
+  main { max-width: 1840px; }
+  body.landing main { max-width: 760px; }
+  body:not(.landing) .dash { display: grid; grid-template-columns: minmax(380px, 1fr) minmax(0, 1.5fr); grid-template-areas: "status map" "wx map"; gap: 0 14px; align-items: start; }
+  body:not(.landing) .dash > .col { display: block; }
+  .col-status { grid-area: status; } .col-wx { grid-area: wx; }
+  .col-map { grid-area: map; position: sticky; top: 10px; }
+  #banner { margin-top: 0; }
+  #banner .lvl { font-size: 2.6rem; }
+  #s-map > details > summary { display: none; }
+  #s-map > details > .body { padding: 10px; }
+  #map { height: calc(100vh - 200px); min-height: 440px; }
+  .clamp:not(.open) { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; cursor: pointer; }
+  .links { grid-template-columns: repeat(6, 1fr); }
+  .links a { padding: 10px 6px; }
+}
+@media (min-width: 1500px) {
+  body:not(.landing) .dash { grid-template-columns: minmax(360px, 1fr) minmax(0, 1.7fr) minmax(360px, 1fr); grid-template-areas: "status map wx"; }
+}
 </style>
 </head>
 <body>
 <main>
   <div id="sample" hidden>SAMPLE DATA — NOT LIVE</div>
   <h1><span class="brand"><img src="assets/header-mark.png" width="40" height="40" alt=""><span id="title">DFR Preflight</span></span><span class="actions"><button id="refresh" type="button">Refresh</button> <button id="theme" type="button" aria-label="Toggle light/dark">Light/Dark</button></span></h1>
+  <div id="place" class="small" hidden></div>
 
-  <div id="banner" class="lv-x" role="status" aria-live="polite">
+  <section id="zip-entry" hidden>
+    <h2>Pre-flight check by ZIP code</h2>
+    <div id="zip-msg" class="err" hidden></div>
+    <div class="small muted">TFRs, METAR/TAF, NWS forecast and alerts, Kp and daylight for a US ZIP code. Bookmark the page it opens, e.g. <span class="mono">/08901</span>.</div>
+    <form id="zip-form" autocomplete="off">
+      <input id="zip-input" name="zip" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" placeholder="ZIP" aria-label="5-digit ZIP code" required>
+      <button type="submit">Check</button>
+    </form>
+    <button id="geo-btn" type="button" hidden>📍 Use my location</button>
+  </section>
+
+  <div class="dash">
+  <div class="col col-status">
+  <div id="banner" class="lv-x loading" role="status" aria-live="polite">
     <div class="lvl">LOADING…</div>
-    <div class="asof">Fetching data</div>
+    <div class="asof">Checking FAA TFRs, METAR/TAF, NWS and Kp</div>
+    <div class="bar"></div>
     <noscript><div class="stale">JavaScript is required. Check official FAA/NWS sources.</div></noscript>
   </div>
-
+  <section id="s-air" class="card"><details><summary><h2>Airspace &amp; LAANC</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
   <section id="s-tfr" class="card"><details><summary><h2>TFRs</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
+  </div>
+
+  <div class="col col-map">
+
+  <section id="s-map" class="card"><details><summary><h2>Map</h2></summary><div class="body">
+    <div id="map" role="img" aria-label="Map of the location, LAANC grid, airspace, restrictions and TFRs"></div>
+    <div class="legend small">
+      <span><i class="sw-0"></i>0 ft</span><span><i class="sw-100"></i>50–100</span><span><i class="sw-200"></i>150–200</span><span><i class="sw-300"></i>250–300</span><span><i class="sw-400"></i>350–400 ft LAANC</span>
+      <span><i class="sw-b"></i>Class B</span><span><i class="sw-c"></i>C</span><span><i class="sw-d"></i>D</span><span><i class="sw-e"></i>E to surface</span>
+      <span><i class="sw-x"></i>Prohibited / restricted / 99.7</span><span><i class="sw-t"></i>TFR</span>
+    </div>
+    <div class="small muted">LAANC numbers appear when zoomed in. Use the layer button to switch to the FAA VFR sectional.</div>
+  </div></details></section>
+  </div>
+
+  <div class="col col-wx">
   <section id="s-metar" class="card"><details><summary><h2>Current conditions (METAR)</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
   <section id="s-fcst" class="card"><details><summary><h2>Next 6 hours</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
   <section id="s-alerts" class="card"><details><summary><h2>NWS alerts</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
   <section id="s-sky" class="card"><details><summary><h2>Kp &amp; daylight</h2><span class="contrib tag lv-x">—</span></summary><div class="body muted">—</div></details></section>
+  </div>
+  </div>
   <section id="s-links"><h2>Official sources</h2>
     <div class="links">
       <a href="https://tfr.faa.gov/tfr3/?page=map" target="_blank" rel="noopener">FAA TFR map</a>
       <a href="https://www.faa.gov/uas/getting_started/b4ufly" target="_blank" rel="noopener">B4UFLY</a>
+      <a href="https://faa.maps.arcgis.com/apps/webappviewer/index.html?id=9c2e4406710048e19806ebf6a06754ad" target="_blank" rel="noopener">FAA UAS Facility Map</a>
+      <a href="https://faadronezone-access.faa.gov/" target="_blank" rel="noopener">FAADroneZone</a>
       <a href="https://aviationweather.gov/" target="_blank" rel="noopener">aviationweather.gov</a>
-      <a id="nws-link" href="https://forecast.weather.gov/MapClick.php?lat=40.4862&amp;lon=-74.4518" target="_blank" rel="noopener">NWS forecast</a>
+      <a id="nws-link" href="https://forecast.weather.gov/" target="_blank" rel="noopener">NWS forecast</a>
     </div>
   </section>
   <section id="s-sources"><details><summary>Data source status</summary><div class="body small"></div></details></section>
 
   <footer>
     Situational awareness aid only. The remote pilot in command remains responsible for the preflight assessment under 14 CFR 107.49 and for checking official FAA sources.
+    <br>ZIP locations from <a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a> (CC BY 4.0). Airspace from the FAA UAS Data Delivery System. Map: <a href="https://leafletjs.com/" target="_blank" rel="noopener">Leaflet</a>, © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors, FAA sectional charts.
   </footer>
 </main>
 <script src="suncalc.js"></script>

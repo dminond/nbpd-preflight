@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    { "source": "/:zip(\\d{5})/", "destination": "/:zip", "permanent": true }
+  ],
+  "rewrites": [
+    { "source": "/:zip(\\d{5})", "destination": "/index.html" },
+    { "source": "/data.json", "destination": "/api/data" }
+  ],
+  "functions": {
+    "api/data.mjs": {
+      "maxDuration": 120,
+      "includeFiles": "{config.json,data/zips.json}"
+    }
+  },
+  "headers": [
+    { "source": "/config.json", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
+  ]
+}
